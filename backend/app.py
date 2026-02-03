@@ -6,9 +6,10 @@ from typing import Optional
 
 import httpx
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException
+from fastapi.responses import HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-import whisper
+from faster_whisper import WhisperModel
 from settings import settings
 
 app = FastAPI(title="tnt-ai")
@@ -18,10 +19,14 @@ app.add_middleware(
 )
 
 # ----- Load models at startup -----
-whisper_model = whisper.load_model(
-    settings.WHISPER_MODEL,
-    download_root=settings.WHISPER_MODEL_DIR,
+print(f"Loading Faster Whisper model: {settings.WHISPER_MODEL} on CPU...")
+whisper_model = WhisperModel(
+    settings.WHISPER_MODEL, 
+    device="cpu", 
+    compute_type=settings.COMPUTE_TYPE,
+    download_root=settings.WHISPER_MODEL_DIR
 )
+print("✅ Model loaded successfully.")
 
 # HTTP client for LibreTranslate API
 http_client = httpx.AsyncClient(timeout=30.0)
@@ -134,20 +139,25 @@ async def transcribe_translate(
             tf.write(wav)
             tf.flush()
             wav_path = tf.name
-        result = await asyncio.to_thread(
+        
+        # Run inference using Faster Whisper
+        segments, info = await asyncio.to_thread(
             whisper_model.transcribe,
             wav_path,
-            task="transcribe",
-            fp16=False,
+            beam_size=5
         )
-        text_value = result.get("text", '')
-        text = text_value[0].strip() if isinstance(text_value, list) and text_value else str(text_value).strip()
         
-        lang_value = result.get("language", "unknown")
-        lang = lang_value[0].lower() if isinstance(lang_value, list) and lang_value else str(lang_value).lower()
-    except subprocess.CalledProcessError as e:
-        raise HTTPException(500, f"Whisper execution failed: {e}")
+        # Collect segments
+        text = " ".join([segment.text for segment in segments]).strip()
+        lang = info.language
+        
     except Exception as e:
+        print(f"Inference Error: {e}")
+        raise HTTPException(500, f"Inference failed: {e}")
+    finally:
+        if wav_path and os.path.exists(wav_path):
+             os.unlink(wav_path)
+
         raise HTTPException(500, str(e))
     finally:
         if wav_path:
@@ -195,4 +205,11 @@ async def transcribe_translate(
 
     lang_display = SUPPORTED_LANG_CODES.get(lang, lang)
     return TranscribeTranslateResp(transcript=text, translation=translated, source_lang=lang_display)
+
+@app.get("/privacy-policy", response_class=HTMLResponse)
+async def get_privacy_policy():
+    """Serves the privacy policy page."""
+    with open("privacy_policy.html", "r", encoding="utf-8") as f:
+        return f.read()
+
 

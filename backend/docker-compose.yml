@@ -1,6 +1,33 @@
 version: '3.8'
 
 services:
+  caddy:
+    image: caddy:latest
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - backend
+
+  backend:
+    build: .
+    restart: always
+    environment:
+      - LIBRETRANSLATE_URL=http://libretranslate:5000
+      - WHISPER_MODEL=small
+    volumes:
+       - ./models:/app/models
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia ... (Removed for CPU VPS)
+
   libretranslate:
     image: libretranslate/libretranslate:latest
     container_name: libretranslate
@@ -36,3 +63,5 @@ services:
 
 volumes:
   libretranslate-data:
+  caddy_data:
+  caddy_config:

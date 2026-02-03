@@ -8,9 +8,9 @@ class Settings(BaseModel):
 
 
     # Whisper
-    WHISPER_MODEL: str = os.getenv("WHISPER_MODEL", "turbo") # tiny|base|small|medium|large|turbo-v3
+    WHISPER_MODEL: str = os.getenv("WHISPER_MODEL", "small") # tiny|base|small|medium|large-v3
     WHISPER_MODEL_DIR: str = os.getenv("WHISPER_MODEL_DIR", "models/whisper")
-
+    COMPUTE_TYPE: str = os.getenv("COMPUTE_TYPE", "int8") # int8 for CPU speed
 
     # LibreTranslate API
     LIBRETRANSLATE_URL: str = os.getenv("LIBRETRANSLATE_URL", "http://localhost:5000")

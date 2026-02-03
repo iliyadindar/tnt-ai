@@ -3,20 +3,7 @@ import * as Device from 'expo-device';
 import { TranscriptionResponse } from '@/types';
 
 const getApiBaseUrl = (): string => {
-    if (Platform.OS === 'android') {
-        // Android emulator: 10.0.2.2 maps to host machine's localhost
-        // If using real device, use your computer's local IP
-        return Device.isDevice 
-            ? 'http://192.168.1.8:8080'  // Real Android device - use your computer's IP
-            : 'http://10.0.2.2:8080';    // Android emulator
-    } else if (Platform.OS === 'ios') {
-        // iOS can use localhost for simulator, or local IP for real device
-        return Device.isDevice
-            ? process.env.EXPO_PUBLIC_API_URL || 'http://192.168.1.8:8080'
-            : 'http://localhost:8080';
-    }
-    // Web or fallback
-    return 'http://localhost:8080';
+    return 'https://iliyadindar.site';
 };
 
 // Retry configuration

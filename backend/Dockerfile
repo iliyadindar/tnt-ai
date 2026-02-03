@@ -1,4 +1,4 @@
-# CPU-only, small and simple
+# CPU-optimized for Hetzner CX33
 FROM python:3.11-slim
 
 ENV DEBIAN_FRONTEND=noninteractive
@@ -8,13 +8,19 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /app
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
 
 COPY . .
+
+# Environment variables
+ENV HOST=0.0.0.0 
+ENV PORT=8080 
+# Using faster-whisper default small model for CPU balance
+ENV WHISPER_MODEL=small 
+ENV OMP_NUM_THREADS=4
+
 EXPOSE 8080
-ENV HOST=0.0.0.0 PORT=8080 WHISPER_MODEL=small \
-    CT2_MODEL_DIR=models/ct2-nllb-200-600M-int8 \
-    SPM_SRC=models/spm/src.model \
-    SPM_TGT=models/spm/tgt.model
 
 CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8080", "--workers", "1"]

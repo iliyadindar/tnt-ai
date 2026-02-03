@@ -3,7 +3,7 @@ uvicorn[standard]
 python-multipart
 pydantic
 ffmpeg-python
-openai-whisper @ git+https://github.com/openai/whisper.git
 httpx
 numpy
-torch
+faster-whisper
+requests
