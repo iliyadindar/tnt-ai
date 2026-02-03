@@ -158,13 +158,6 @@ async def transcribe_translate(
         if wav_path and os.path.exists(wav_path):
              os.unlink(wav_path)
 
-        raise HTTPException(500, str(e))
-    finally:
-        if wav_path:
-            try:
-                os.remove(wav_path)
-            except OSError:
-                pass
 
     if not text:
         return TranscribeTranslateResp(transcript="", translation="", source_lang=lang)

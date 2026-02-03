@@ -19,6 +19,6 @@ class Settings(BaseModel):
 
     # Language routing
     DEFAULT_TARGET_LANG: str = os.getenv("DEFAULT_TARGET_LANG", "English") # e.g., "English", "Turkish", "Persian"
-
-
+    
 settings = Settings()
+
