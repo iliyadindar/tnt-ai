@@ -25,6 +25,8 @@ whisper_model = WhisperModel(
     settings.WHISPER_MODEL, 
     device="cpu", 
     compute_type=settings.COMPUTE_TYPE,
+    cpu_threads=settings.CPU_THREADS,   # Parallel CPU threads
+    num_workers=settings.NUM_WORKERS,   # Parallel transcription workers
     download_root=settings.WHISPER_MODEL_DIR
 )
 print("✅ Model loaded successfully.")
@@ -160,11 +162,15 @@ async def transcribe_translate(
             tf.flush()
             wav_path = tf.name
         
-        # Run inference using Faster Whisper
+        # Run inference using Faster Whisper (optimized for speed)
         segments, info = await asyncio.to_thread(
             whisper_model.transcribe,
             wav_path,
-            beam_size=5
+            beam_size=1,              # Greedy decoding = much faster, minimal quality loss
+            vad_filter=True,          # Skip silence = huge speedup
+            vad_parameters=dict(
+                min_silence_duration_ms=500,
+            ),
         )
         
         # Collect segments
