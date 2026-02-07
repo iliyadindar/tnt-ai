@@ -19,8 +19,8 @@ COPY . .
 # Environment variables
 ENV HOST=0.0.0.0 
 ENV PORT=8080 
-# Using faster-whisper large-v3-turbo for best quality/speed balance
-ENV WHISPER_MODEL=large-v3-turbo 
+# CPU-optimized: medium model = good accuracy + reasonable speed
+ENV WHISPER_MODEL=medium 
 ENV OMP_NUM_THREADS=0
 ENV CT2_USE_EXPERIMENTAL_PACKED_GEMM=1
 

@@ -8,7 +8,7 @@ class Settings(BaseModel):
 
 
     # Whisper
-    WHISPER_MODEL: str = os.getenv("WHISPER_MODEL", "large-v3-turbo") # tiny|base|small|medium|large-v3|large-v3-turbo
+    WHISPER_MODEL: str = os.getenv("WHISPER_MODEL", "medium") # tiny|base|small|medium|large-v3|large-v3-turbo
     WHISPER_MODEL_DIR: str = os.getenv("WHISPER_MODEL_DIR", "models/whisper")
     COMPUTE_TYPE: str = os.getenv("COMPUTE_TYPE", "int8") # int8 for CPU speed
     CPU_THREADS: int = int(os.getenv("CPU_THREADS", "0"))  # 0 = auto-detect all cores
