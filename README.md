@@ -192,6 +192,12 @@ cd android && ./gradlew bundleRelease
 
 Transcribes audio and translates the result to the target language.
 
+**Headers**
+
+| Header | Required | Description |
+|---|---|---|
+| `X-API-Key` | ✅ | API authentication key — requests without a valid key receive `403 Forbidden` |
+
 **Request** — `multipart/form-data`
 
 | Field | Type | Required | Description |
@@ -267,6 +273,24 @@ tnt-ai/
 
 ---
 
+## Authentication
+
+The API is protected with an API key. All requests to `/v1/transcribe_translate` must include a valid `X-API-Key` header — unauthorized requests are rejected with `403 Forbidden`.
+
+**Setup:**
+
+1. Generate a key: `python -c "import secrets; print(secrets.token_urlsafe(32))"`
+2. Set the key on the **backend** via the `API_KEY` environment variable (or in `settings.py`)
+3. Set the key on the **mobile app** in `mobile/.env`:
+   ```
+   EXPO_PUBLIC_API_KEY=your-secret-key-here
+   ```
+4. The `.env` file is git-ignored — your key stays out of version control
+
+> **Note:** Public endpoints (`/`, `/privacy-policy`) do not require authentication.
+
+---
+
 ## Configuration
 
 The backend is configurable via environment variables:
@@ -278,6 +302,7 @@ The backend is configurable via environment variables:
 | `CPU_THREADS` | `0` | CPU threads (0 = auto-detect) |
 | `NUM_WORKERS` | `2` | Parallel transcription workers |
 | `DEFAULT_TARGET_LANG` | `English` | Default translation target |
+| `API_KEY` | (auto-generated) | API authentication key — must match the key in the mobile app's `.env` |
 | `PORT` | `8080` | Server port |
 
 ---

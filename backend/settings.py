@@ -16,6 +16,9 @@ class Settings(BaseModel):
 
     # Language routing
     DEFAULT_TARGET_LANG: str = os.getenv("DEFAULT_TARGET_LANG", "English") # e.g., "English", "Turkish", "Persian"
+
+    # API Authentication
+    API_KEY: str = os.getenv("API_KEY", "YOUR_SECURE_API_KEY")
     
 settings = Settings()
 

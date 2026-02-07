@@ -6,7 +6,7 @@ from typing import Optional
 
 import argostranslate.package
 import argostranslate.translate
-from fastapi import FastAPI, UploadFile, File, Form, HTTPException
+from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Depends, Header
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
@@ -19,6 +19,12 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"], allow_methods=["*"], allow_headers=["*"], allow_credentials=True
 )
+
+# ----- API Key Authentication -----
+async def verify_api_key(x_api_key: str = Header(..., alias="X-API-Key")):
+    if x_api_key != settings.API_KEY:
+        raise HTTPException(status_code=403, detail="Invalid API key")
+    return x_api_key
 
 # ----- Load models at startup -----
 print(f"Loading Faster Whisper model: {settings.WHISPER_MODEL} on CPU...")
@@ -123,7 +129,8 @@ def to_wav(input_bytes: bytes) -> bytes:
 @app.post("/v1/transcribe_translate", response_model=TranscribeTranslateResp)
 async def transcribe_translate(
     file: UploadFile = File(...),
-    target_lang: str = Form(default=settings.DEFAULT_TARGET_LANG)
+    target_lang: str = Form(default=settings.DEFAULT_TARGET_LANG),
+    api_key: str = Depends(verify_api_key),
 ):
     # target_lang is a human-readable name; pick its tokenizer/model at deploy time
     if target_lang not in LANG_NAME_TO_CODE:

@@ -6,6 +6,8 @@ const getApiBaseUrl = (): string => {
     return 'https://iliyadindar.site';
 };
 
+const API_KEY = process.env.EXPO_PUBLIC_API_KEY ?? '';
+
 // Retry configuration
 const MAX_RETRIES = 3;
 const INITIAL_RETRY_DELAY = 1000; // ms
@@ -74,6 +76,9 @@ export const BackendAPI = {
                 const response = await fetchWithTimeout(url, {
                     method: 'POST',
                     body: formData,
+                    headers: {
+                        'X-API-Key': API_KEY,
+                    },
                     // Don't set Content-Type manually - let FormData set it with boundary
                 });
                 
