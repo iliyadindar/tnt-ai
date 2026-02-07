@@ -4,7 +4,8 @@ import subprocess
 import tempfile
 from typing import Optional
 
-import httpx
+import argostranslate.package
+import argostranslate.translate
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException
 from fastapi.responses import HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -28,8 +29,35 @@ whisper_model = WhisperModel(
 )
 print("✅ Model loaded successfully.")
 
-# HTTP client for LibreTranslate API
-http_client = httpx.AsyncClient(timeout=30.0)
+# ----- Argos Translate (fully offline, no API key) -----
+def _install_argos_languages():
+    """Download & install required Argos Translate language packs."""
+    argostranslate.package.update_package_index()
+    available = argostranslate.package.get_available_packages()
+    # All pairs we need between en, tr, ar, fa
+    required_pairs = [
+        ("en", "tr"), ("tr", "en"),
+        ("en", "ar"), ("ar", "en"),
+        ("en", "fa"), ("fa", "en"),
+        ("tr", "ar"), ("ar", "tr"),
+        ("tr", "fa"), ("fa", "tr"),
+        ("ar", "fa"), ("fa", "ar"),
+    ]
+    installed = argostranslate.package.get_installed_packages()
+    installed_pairs = {(p.from_code, p.to_code) for p in installed}
+    for src, tgt in required_pairs:
+        if (src, tgt) in installed_pairs:
+            continue
+        pkg = next((p for p in available if p.from_code == src and p.to_code == tgt), None)
+        if pkg:
+            print(f"📦 Installing Argos language pack: {src} → {tgt}")
+            argostranslate.package.install_from_path(pkg.download())
+        else:
+            print(f"⚠️  Argos package not found: {src} → {tgt} (will use pivot through English)")
+
+print("🌐 Setting up Argos Translate (offline)...")
+_install_argos_languages()
+print("✅ Argos Translate ready.")
 
 class TranscribeTranslateResp(BaseModel):
     transcript: str
@@ -40,20 +68,12 @@ SUPPORTED_LANG_CODES = {
     "ar": "Arabic", "en": "English", "fa": "Persian", "tr": "Turkish",
 }
 
-# Language name to LibreTranslate code mapping
+# Language name → Argos Translate language code
 LANG_NAME_TO_CODE = {
     "English": "en",
     "Turkish": "tr",
     "Persian": "fa",
     "Arabic": "ar",
-}
-
-# Whisper language codes to LibreTranslate codes
-WHISPER_TO_LIBRETRANSLATE = {
-    "tr": "tr",
-    "en": "en",
-    "fa": "fa",
-    "ar": "ar",
 }
 
 # Whisper expects wav/float or a file path; we normalize via ffmpeg
@@ -162,38 +182,22 @@ async def transcribe_translate(
     if not text:
         return TranscribeTranslateResp(transcript="", translation="", source_lang=lang)
 
-    # Translate using LibreTranslate API
+    # Translate using Argos Translate (fully offline)
     try:
-        source_lang_code = WHISPER_TO_LIBRETRANSLATE.get(lang, "en")
+        source_lang_code = lang if lang in SUPPORTED_LANG_CODES else "en"
         
-        # Prepare request payload
-        payload = {
-            "q": text,
-            "source": source_lang_code,
-            "target": target_lang_code,
-            "format": "text",
-        }
-        
-        # Add API key if configured
-        if settings.LIBRETRANSLATE_API_KEY:
-            payload["api_key"] = settings.LIBRETRANSLATE_API_KEY
-        
-        # Call LibreTranslate API
-        response = await http_client.post(
-            f"{settings.LIBRETRANSLATE_URL}/translate",
-            json=payload,
-            headers={"Content-Type": "application/json"},
-        )
-        
-        if response.status_code != 200:
-            raise HTTPException(500, f"LibreTranslate API error: {response.text}")
-        
-        result = response.json()
-        translated = result.get("translatedText", "")
-        
-    except httpx.HTTPError as e:
-        raise HTTPException(500, f"Translation API request failed: {e}")
+        if source_lang_code == target_lang_code:
+            # Same language, no translation needed
+            translated = text
+        else:
+            translated = await asyncio.to_thread(
+                argostranslate.translate.translate,
+                text,
+                source_lang_code,
+                target_lang_code,
+            )
     except Exception as e:
+        print(f"❌ Translation error: {e}")
         raise HTTPException(500, f"Translation error: {e}")
 
     lang_display = SUPPORTED_LANG_CODES.get(lang, lang)

@@ -8,14 +8,9 @@ class Settings(BaseModel):
 
 
     # Whisper
-    WHISPER_MODEL: str = os.getenv("WHISPER_MODEL", "small") # tiny|base|small|medium|large-v3
+    WHISPER_MODEL: str = os.getenv("WHISPER_MODEL", "large-v3-turbo") # tiny|base|small|medium|large-v3|large-v3-turbo
     WHISPER_MODEL_DIR: str = os.getenv("WHISPER_MODEL_DIR", "models/whisper")
     COMPUTE_TYPE: str = os.getenv("COMPUTE_TYPE", "int8") # int8 for CPU speed
-
-    # LibreTranslate API
-    LIBRETRANSLATE_URL: str = os.getenv("LIBRETRANSLATE_URL", "http://localhost:5000")
-    LIBRETRANSLATE_API_KEY: str = os.getenv("LIBRETRANSLATE_API_KEY", "")  # Optional, for authenticated instances
-
 
     # Language routing
     DEFAULT_TARGET_LANG: str = os.getenv("DEFAULT_TARGET_LANG", "English") # e.g., "English", "Turkish", "Persian"

@@ -18,8 +18,7 @@ services:
     build: .
     restart: always
     environment:
-      - LIBRETRANSLATE_URL=http://libretranslate:5000
-      - WHISPER_MODEL=small
+      - WHISPER_MODEL=large-v3-turbo
     volumes:
        - ./models:/app/models
     # deploy:
@@ -27,41 +26,6 @@ services:
     #     reservations:
     #       devices:
     #         - driver: nvidia ... (Removed for CPU VPS)
-
-  libretranslate:
-    image: libretranslate/libretranslate:latest
-    container_name: libretranslate
-    restart: unless-stopped
-    ports:
-      - "5000:5000"
-    environment:
-      # Disable frontend to reduce memory usage
-      LT_DISABLE_WEB_UI: "false"
-      # Limit languages to only the ones you need (reduces memory usage significantly)
-      LT_LOAD_ONLY: "en,tr,ar,fa"
-      # Enable API keys for security (optional)
-      # LT_API_KEYS: "true"
-      # Set API keys file path (optional)
-      # LT_API_KEYS_DB_PATH: "/app/db/api_keys.db"
-      # Disable files translation
-      LT_DISABLE_FILES_TRANSLATION: "true"
-      # Set suggestions mode
-      LT_SUGGESTIONS: "false"
-      # Set character limit
-      LT_CHAR_LIMIT: "5000"
-      # Number of threads
-      LT_THREADS: "4"
-    volumes:
-      # Persist downloaded models
-      - libretranslate-data:/home/libretranslate/.local
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 60s
-
 volumes:
-  libretranslate-data:
   caddy_data:
   caddy_config:

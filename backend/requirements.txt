@@ -3,7 +3,7 @@ uvicorn[standard]
 python-multipart
 pydantic
 ffmpeg-python
-httpx
+argostranslate
 numpy
 faster-whisper
 requests
