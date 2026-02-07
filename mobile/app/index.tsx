@@ -434,9 +434,9 @@ export default function HomeScreen() {
             </GlassIsland>
             <GlassIsland isDark={isDarkMode} borderRadius={16} style={styles.emptyTextIsland}>
               <View style={styles.emptyTextInner}>
-                <Text style={[styles.emptyTitle, { color: t.text }]}>Start Speaking</Text>
+                <Text style={[styles.emptyTitle, { color: t.text }]}>Start Recording</Text>
                 <Text style={[styles.emptyDesc, { color: t.textSecondary }]}>
-                  Hold the mic button to record.{'\n'}Your speech will be transcribed & translated.
+                  Tap the mic button to start recording.{'\n'}Your speech will be transcribed & translated.
                 </Text>
               </View>
             </GlassIsland>
@@ -459,8 +459,7 @@ export default function HomeScreen() {
         <GlassIsland isDark={isDarkMode} borderRadius={36} intensity={50} style={styles.micIsland}>
           <Animated.View style={{ transform: [{ scale: Animated.multiply(pulseAnim, buttonScaleAnim) }] }}>
             <TouchableOpacity
-              onPressIn={handleStartRecording}
-              onPressOut={handleStopRecording}
+              onPress={isRecording ? handleStopRecording : handleStartRecording}
               disabled={isProcessing || !backendOnline}
               activeOpacity={0.75}
               style={[
@@ -481,7 +480,7 @@ export default function HomeScreen() {
         {/* Hint island */}
         <GlassIsland isDark={isDarkMode} borderRadius={10} style={styles.hintIsland}>
           <Text style={[styles.micHint, { color: t.textSecondary }]}>
-            {isRecording ? 'Recording... release to stop' : backendOnline ? 'Hold to record' : 'Backend offline'}
+            {isRecording ? 'Recording... tap to stop' : backendOnline ? 'Tap to record' : 'Backend offline'}
           </Text>
         </GlassIsland>
       </View>
