@@ -7,9 +7,50 @@ import {
   FlatList,
   Modal,
   SafeAreaView,
+  Platform,
+  StatusBar as RNStatusBar,
 } from 'react-native';
+import { BlurView } from 'expo-blur';
 import { Session } from '@/types';
 import { FontAwesome } from '@expo/vector-icons';
+
+/* ─── Reusable Glass Island ─── */
+const GlassIsland: React.FC<{
+  children: React.ReactNode;
+  isDark: boolean;
+  style?: any;
+  borderRadius?: number;
+  intensity?: number;
+}> = ({ children, isDark, style, borderRadius = 16, intensity = 40 }) => (
+  <View
+    style={[
+      {
+        borderRadius,
+        overflow: 'hidden',
+        borderWidth: 1,
+        borderColor: isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.08)',
+      },
+      style,
+    ]}
+  >
+    <BlurView
+      intensity={intensity}
+      tint={isDark ? 'dark' : 'light'}
+      style={StyleSheet.absoluteFill}
+    />
+    <View
+      style={[
+        StyleSheet.absoluteFill,
+        {
+          backgroundColor: isDark
+            ? 'rgba(255,255,255,0.06)'
+            : 'rgba(255,255,255,0.55)',
+        },
+      ]}
+    />
+    {children}
+  </View>
+);
 
 interface HistorySidebarProps {
   visible: boolean;
@@ -32,85 +73,119 @@ export const HistorySidebar: React.FC<HistorySidebarProps> = ({
   onNewSession,
   onDeleteSession,
 }) => {
-  // Dynamic theme colors
-  const theme = {
-    bg: isDarkMode ? '#000000' : '#FFFFFF',
-    cardBg: isDarkMode ? '#1C1C1E' : '#F8F8F8',
-    border: isDarkMode ? '#38383A' : '#E0E0E0',
-    text: isDarkMode ? '#FFFFFF' : '#000000',
-    textSecondary: isDarkMode ? '#98989D' : '#666666',
-    primary: '#2e2d80ff',
-    activeBg: isDarkMode ? '#2e2d80ff20' : '#2e2d80ff10',
-    error: '#FF3B30',
-  };
+  const t = isDarkMode
+    ? {
+        bg: '#0A0A0C',
+        text: '#FFFFFF',
+        textSecondary: '#8E8E93',
+        primary: '#6C6CFF',
+        error: '#FF453A',
+        activeBorder: 'rgba(108,108,255,0.5)',
+      }
+    : {
+        bg: '#EFEAE5',
+        text: '#000000',
+        textSecondary: '#6B6B70',
+        primary: '#5B5BD6',
+        error: '#FF3B30',
+        activeBorder: 'rgba(91,91,214,0.4)',
+      };
 
   const renderSession = ({ item }: { item: Session }) => {
     const isActive = item.id === activeSessionId;
-    const messageCount = item.messages.length;
-    
+    const count = item.messages.length;
+
     return (
-      <TouchableOpacity
+      <GlassIsland
+        isDark={isDarkMode}
+        borderRadius={14}
+        intensity={isActive ? 50 : 30}
         style={[
-          styles.sessionItem,
-          { backgroundColor: theme.cardBg, borderColor: theme.border },
-          isActive && { backgroundColor: theme.activeBg, borderColor: theme.primary },
+          styles.card,
+          isActive && { borderColor: t.activeBorder },
         ]}
-        onPress={() => {
-          onSelectSession(item.id);
-          onClose();
-        }}
       >
-        <View style={styles.sessionContent}>
-          <Text style={[styles.sessionTitle, { color: theme.text }, isActive && { color: theme.primary }]} numberOfLines={1}>
-            {item.title}
-          </Text>
-          <Text style={[styles.sessionInfo, { color: theme.textSecondary }]}>
-            {messageCount} message{messageCount !== 1 ? 's' : ''} • {new Date(item.updatedAt).toLocaleDateString()}
-          </Text>
-        </View>
         <TouchableOpacity
-          style={styles.deleteButton}
-          onPress={() => onDeleteSession(item.id)}
+          style={styles.cardTouchable}
+          activeOpacity={0.6}
+          onPress={() => {
+            onSelectSession(item.id);
+            onClose();
+          }}
         >
-          <FontAwesome name="trash-o" size={18} color={theme.error} />
+          <View style={styles.cardBody}>
+            <Text style={[styles.cardTitle, { color: isActive ? t.primary : t.text }]} numberOfLines={1}>
+              {item.title}
+            </Text>
+            <Text style={[styles.cardMeta, { color: t.textSecondary }]}>
+              {count} message{count !== 1 ? 's' : ''} · {new Date(item.updatedAt).toLocaleDateString()}
+            </Text>
+          </View>
+
+          {/* Delete island */}
+          <TouchableOpacity
+            style={[styles.deleteBtn, { borderColor: isDarkMode ? 'rgba(255,69,58,0.2)' : 'rgba(255,59,48,0.15)', borderWidth: 1, borderRadius: 10, backgroundColor: isDarkMode ? 'rgba(255,69,58,0.08)' : 'rgba(255,59,48,0.06)' }]}
+            onPress={() => onDeleteSession(item.id)}
+          >
+            <FontAwesome name="trash-o" size={14} color={t.error} />
+          </TouchableOpacity>
         </TouchableOpacity>
-      </TouchableOpacity>
+      </GlassIsland>
     );
   };
 
   return (
-    <Modal
-      visible={visible}
-      animationType="slide"
-      presentationStyle="pageSheet"
-      onRequestClose={onClose}
-    >
-      <SafeAreaView style={[styles.container, { backgroundColor: theme.bg }]}>
-        <View style={[styles.header, { backgroundColor: theme.cardBg, borderBottomColor: theme.border }]}>
-          <Text style={[styles.headerTitle, { color: theme.text }]}>Chat History</Text>
-          <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-            <FontAwesome name="times" size={24} color={theme.primary} />
-          </TouchableOpacity>
+    <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
+      <SafeAreaView style={[styles.container, { backgroundColor: t.bg }]}>
+        {/* Header: title island + close island */}
+        <View style={styles.header}>
+          <GlassIsland isDark={isDarkMode} borderRadius={14} style={styles.headerTitleIsland}>
+            <Text style={[styles.headerTitle, { color: t.text }]}>Chats</Text>
+          </GlassIsland>
+
+          <GlassIsland isDark={isDarkMode} borderRadius={12} style={styles.closeIsland}>
+            <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
+              <FontAwesome name="times" size={18} color={t.textSecondary} />
+            </TouchableOpacity>
+          </GlassIsland>
         </View>
 
-        <TouchableOpacity style={[styles.newChatButton, { backgroundColor: theme.primary }]} onPress={() => {
-          onNewSession();
-          onClose();
-        }}>
-          <FontAwesome name="plus" size={20} color="#fff" />
-          <Text style={styles.newChatText}>New Chat</Text>
-        </TouchableOpacity>
+        {/* New chat island */}
+        <GlassIsland
+          isDark={isDarkMode}
+          borderRadius={14}
+          style={[styles.newBtn, { borderColor: isDarkMode ? 'rgba(108,108,255,0.35)' : 'rgba(91,91,214,0.3)' }]}
+        >
+          <TouchableOpacity
+            activeOpacity={0.7}
+            style={styles.newBtnInner}
+            onPress={() => {
+              onNewSession();
+              onClose();
+            }}
+          >
+            <View style={[styles.newBtnIcon, { backgroundColor: t.primary }]}>
+              <FontAwesome name="plus" size={14} color="#fff" />
+            </View>
+            <Text style={[styles.newBtnText, { color: t.primary }]}>New Chat</Text>
+          </TouchableOpacity>
+        </GlassIsland>
 
+        {/* Session list */}
         <FlatList
           data={sessions}
           renderItem={renderSession}
           keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.listContent}
+          contentContainerStyle={styles.list}
+          showsVerticalScrollIndicator={false}
           ListEmptyComponent={
-            <View style={styles.emptyState}>
-              <FontAwesome name="comments-o" size={64} color={theme.border} />
-              <Text style={[styles.emptyText, { color: theme.textSecondary }]}>No chat history yet</Text>
-              <Text style={[styles.emptySubtext, { color: theme.textSecondary }]}>Start a new conversation to begin</Text>
+            <View style={styles.empty}>
+              <GlassIsland isDark={isDarkMode} borderRadius={20} style={styles.emptyIsland}>
+                <View style={styles.emptyInner}>
+                  <FontAwesome name="comments-o" size={40} color={t.textSecondary} style={{ opacity: 0.5 }} />
+                  <Text style={[styles.emptyText, { color: t.textSecondary }]}>No chats yet</Text>
+                </View>
+              </GlassIsland>
             </View>
           }
         />
@@ -122,94 +197,100 @@ export const HistorySidebar: React.FC<HistorySidebarProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8F8F8',
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 16,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    paddingTop: Platform.OS === 'android' ? (RNStatusBar.currentHeight || 0) + 10 : 10,
+    gap: 10,
   },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#000',
-  },
-  closeButton: {
-    padding: 8,
-  },
-  newChatButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#2e2d80ff',
-    margin: 16,
-    padding: 16,
-    borderRadius: 12,
-    gap: 12,
-  },
-  newChatText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  listContent: {
-    padding: 16,
-  },
-  sessionItem: {
-    flexDirection: 'row',
-    backgroundColor: '#fff',
-    padding: 16,
-    marginBottom: 12,
-    borderRadius: 12,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  activeSession: {
-    backgroundColor: '#E3F2FD',
-    borderWidth: 2,
-    borderColor: '#2e2d80ff',
-  },
-  sessionContent: {
+  headerTitleIsland: {
     flex: 1,
   },
-  sessionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#000',
-    marginBottom: 4,
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
   },
-  activeText: {
-    color: '#2e2d80ff',
-  },
-  sessionInfo: {
-    fontSize: 12,
-    color: '#666',
-  },
-  deleteButton: {
-    padding: 8,
-  },
-  emptyState: {
+  closeIsland: {},
+  closeBtn: {
+    width: 38,
+    height: 38,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 64,
+  },
+  newBtn: {
+    marginHorizontal: 14,
+    marginBottom: 10,
+  },
+  newBtnInner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    gap: 10,
+  },
+  newBtnIcon: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  newBtnText: {
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  list: {
+    paddingHorizontal: 14,
+    paddingBottom: 16,
+    gap: 6,
+  },
+  card: {
+    // glass island styling from GlassIsland component
+  },
+  cardTouchable: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  cardBody: {
+    flex: 1,
+  },
+  cardTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    marginBottom: 2,
+  },
+  cardMeta: {
+    fontSize: 12,
+  },
+  deleteBtn: {
+    width: 32,
+    height: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  empty: {
+    alignItems: 'center',
+    paddingVertical: 50,
+    paddingHorizontal: 40,
+  },
+  emptyIsland: {
+    width: '100%',
+  },
+  emptyInner: {
+    alignItems: 'center',
+    paddingVertical: 30,
+    gap: 10,
   },
   emptyText: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '600',
-    color: '#999',
-    marginTop: 16,
-  },
-  emptySubtext: {
-    fontSize: 14,
-    color: '#BBB',
-    marginTop: 8,
   },
 });

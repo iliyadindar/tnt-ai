@@ -6,45 +6,37 @@ import {
   Animated,
   TouchableOpacity,
 } from 'react-native';
+import { BlurView } from 'expo-blur';
 import { Message } from '@/types';
 import { FontAwesome } from '@expo/vector-icons';
 
-// Skeleton Loading Component
-const SkeletonLine: React.FC<{ width: string; isDarkMode: boolean; delay?: number }> = ({ width, isDarkMode, delay = 0 }) => {
-  const shimmerAnim = React.useRef(new Animated.Value(0)).current;
+// Skeleton shimmer
+const SkeletonLine: React.FC<{ width: string; isDarkMode: boolean; delay?: number }> = ({
+  width,
+  isDarkMode,
+  delay = 0,
+}) => {
+  const anim = React.useRef(new Animated.Value(0)).current;
 
   React.useEffect(() => {
     setTimeout(() => {
       Animated.loop(
         Animated.sequence([
-          Animated.timing(shimmerAnim, {
-            toValue: 1,
-            duration: 1000,
-            useNativeDriver: false, // Can't use native driver for opacity
-          }),
-          Animated.timing(shimmerAnim, {
-            toValue: 0,
-            duration: 1000,
-            useNativeDriver: false,
-          }),
+          Animated.timing(anim, { toValue: 1, duration: 900, useNativeDriver: false }),
+          Animated.timing(anim, { toValue: 0, duration: 900, useNativeDriver: false }),
         ])
       ).start();
     }, delay);
   }, []);
 
-  const opacity = shimmerAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0.3, 0.7],
-  });
-
   return (
     <Animated.View
       style={[
-        styles.skeletonLine,
+        styles.skeleton,
         {
-          width: width as any, // Type assertion for percentage string
-          backgroundColor: isDarkMode ? '#3A3A3C' : '#E0E0E0',
-          opacity,
+          width: width as any,
+          backgroundColor: isDarkMode ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.08)',
+          opacity: anim.interpolate({ inputRange: [0, 1], outputRange: [0.3, 0.7] }),
         },
       ]}
     />
@@ -64,211 +56,234 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
 }) => {
   const isUser = message.type === 'user';
   const fadeAnim = React.useRef(new Animated.Value(0)).current;
-  const slideAnim = React.useRef(new Animated.Value(30)).current;
-  const scaleAnim = React.useRef(new Animated.Value(0.9)).current;
+  const slideAnim = React.useRef(new Animated.Value(12)).current;
 
   React.useEffect(() => {
-    // World-class entrance animation: fade + slide + scale with spring
     Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 400,
-        useNativeDriver: true,
-      }),
-      Animated.spring(slideAnim, {
-        toValue: 0,
-        tension: 60,
-        friction: 8,
-        useNativeDriver: true,
-      }),
-      Animated.spring(scaleAnim, {
-        toValue: 1,
-        tension: 60,
-        friction: 8,
-        useNativeDriver: true,
-      }),
+      Animated.timing(fadeAnim, { toValue: 1, duration: 250, useNativeDriver: true }),
+      Animated.spring(slideAnim, { toValue: 0, tension: 80, friction: 10, useNativeDriver: true }),
     ]).start();
   }, []);
 
-  // Dynamic theme colors
-  const theme = {
-    userBg: '#2e2d80ff',
-    assistantBg: isDarkMode ? '#2C2C2E' : '#F0F0F0',
-    userText: '#FFFFFF',
-    assistantText: isDarkMode ? '#FFFFFF' : '#000000',
-    borderColor: isDarkMode ? '#38383A' : '#E0E0E0',
-    metaText: isDarkMode ? '#98989D' : '#666666',
-    errorBg: isDarkMode ? '#3A1A1A' : '#FFE5E5',
-    errorText: '#FF3B30',
-  };
+  // Glass island colors
+  const c = isDarkMode
+    ? {
+        userBorder: 'rgba(108,108,255,0.35)',
+        otherBorder: 'rgba(255,255,255,0.12)',
+        userBg: 'rgba(108,108,255,0.12)',
+        otherBg: 'rgba(255,255,255,0.06)',
+        userText: '#FFFFFF',
+        otherText: '#FFFFFF',
+        meta: 'rgba(255,255,255,0.45)',
+        userMeta: 'rgba(255,255,255,0.6)',
+        divider: 'rgba(255,255,255,0.1)',
+        errorBg: 'rgba(255,69,58,0.15)',
+        errorText: '#FF453A',
+        labelBg: 'rgba(255,255,255,0.06)',
+      }
+    : {
+        userBorder: 'rgba(91,91,214,0.3)',
+        otherBorder: 'rgba(0,0,0,0.08)',
+        userBg: 'rgba(91,91,214,0.08)',
+        otherBg: 'rgba(255,255,255,0.6)',
+        userText: '#1A1A2E',
+        otherText: '#000000',
+        meta: 'rgba(0,0,0,0.35)',
+        userMeta: 'rgba(91,91,214,0.6)',
+        divider: 'rgba(0,0,0,0.06)',
+        errorBg: 'rgba(255,59,48,0.1)',
+        errorText: '#FF3B30',
+        labelBg: 'rgba(0,0,0,0.04)',
+      };
+
+  const borderColor = isUser ? c.userBorder : c.otherBorder;
+  const textColor = isUser ? c.userText : c.otherText;
+  const metaColor = isUser ? c.userMeta : c.meta;
 
   return (
     <Animated.View
       style={[
-        styles.messageContainer,
-        isUser ? styles.userMessage : styles.assistantMessage,
-        { 
-          opacity: fadeAnim,
-          transform: [
-            { translateY: slideAnim },
-            { scale: scaleAnim },
-          ],
-        },
+        styles.row,
+        isUser ? styles.rowRight : styles.rowLeft,
+        { opacity: fadeAnim, transform: [{ translateY: slideAnim }] },
       ]}
     >
-      {/* Audio Icon */}
-      {message.audioUri && (
-        <TouchableOpacity
-          style={styles.audioIcon}
-          onPress={onPlayAudio}
-        >
-          <FontAwesome name="volume-up" size={16} color={isUser ? '#fff' : theme.metaText} />
-        </TouchableOpacity>
-      )}
+      {/* Glass island bubble */}
+      <View
+        style={[
+          styles.bubble,
+          isUser ? styles.bubbleUser : styles.bubbleOther,
+          { borderColor, borderWidth: 1 },
+        ]}
+      >
+        <BlurView
+          intensity={isDarkMode ? 30 : 50}
+          tint={isDarkMode ? 'dark' : 'light'}
+          style={StyleSheet.absoluteFill}
+        />
+        <View
+          style={[
+            StyleSheet.absoluteFill,
+            { backgroundColor: isUser ? c.userBg : c.otherBg },
+          ]}
+        />
 
-      {/* Transcript */}
-      {message.transcript && (
-        <View style={styles.textSection}>
-          <Text style={[styles.label, { color: isUser ? '#FFFFFF' : theme.metaText }]}>
-            {isUser ? '🎤 You said:' : '📝 Transcript:'}
-          </Text>
-          <Text style={[styles.text, { color: isUser ? theme.userText : theme.assistantText }]}>
-            {message.transcript}
-          </Text>
-        </View>
-      )}
+        {/* Audio button - glass island pill */}
+        {message.audioUri && (
+          <TouchableOpacity
+            style={[styles.audioBtn, { borderColor: isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)' }]}
+            onPress={onPlayAudio}
+            activeOpacity={0.6}
+          >
+            <FontAwesome name="volume-up" size={12} color={metaColor} />
+          </TouchableOpacity>
+        )}
 
-      {/* Loading State - Skeleton */}
-      {message.isLoading && !message.transcript && (
-        <View style={styles.textSection}>
-          <Text style={[styles.label, { color: isUser ? '#FFFFFF' : theme.metaText }]}>
-            🤖 AI is processing...
-          </Text>
-          <View style={styles.skeletonContainer}>
-            <SkeletonLine width="90%" isDarkMode={isDarkMode} delay={0} />
-            <SkeletonLine width="75%" isDarkMode={isDarkMode} delay={100} />
-            <SkeletonLine width="85%" isDarkMode={isDarkMode} delay={200} />
+        {/* Transcript section - inner island */}
+        {message.transcript && (
+          <View style={[styles.section, styles.innerIsland, { backgroundColor: c.labelBg, borderColor: isDarkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)' }]}>
+            <Text style={[styles.label, { color: metaColor }]}>
+              {isUser ? 'You said' : 'Transcript'}
+            </Text>
+            <Text style={[styles.msgText, { color: textColor }]}>{message.transcript}</Text>
           </View>
-        </View>
-      )}
+        )}
 
-      {/* Translation */}
-      {message.translation && (
-        <View style={[styles.textSection, styles.translationSection, { borderTopColor: theme.borderColor }]}>
-          <Text style={[styles.label, { color: isUser ? '#FFFFFF' : theme.metaText }]}>
-            🌍 Translation ({message.targetLanguage}):
-          </Text>
-          <Text style={[styles.text, styles.translationText, { color: isUser ? theme.userText : theme.assistantText }]}>
-            {message.translation}
-          </Text>
-        </View>
-      )}
+        {/* Loading skeleton */}
+        {message.isLoading && !message.transcript && (
+          <View style={[styles.section, styles.innerIsland, { backgroundColor: c.labelBg, borderColor: isDarkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)' }]}>
+            <Text style={[styles.label, { color: metaColor }]}>Processing...</Text>
+            <SkeletonLine width="88%" isDarkMode={isDarkMode} />
+            <SkeletonLine width="72%" isDarkMode={isDarkMode} delay={80} />
+            <SkeletonLine width="80%" isDarkMode={isDarkMode} delay={160} />
+          </View>
+        )}
 
-      {/* Detected Language */}
-      {message.detectedLanguage && (
-        <Text style={[styles.metadata, { color: isUser ? 'rgba(255,255,255,0.7)' : theme.metaText }]}>
-          Detected: {message.detectedLanguage}
+        {/* Translation section - inner island */}
+        {message.translation && (
+          <View style={[styles.section, styles.innerIsland, { backgroundColor: c.labelBg, borderColor: isDarkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)', marginTop: 6 }]}>
+            <Text style={[styles.label, { color: metaColor }]}>
+              {message.targetLanguage}
+            </Text>
+            <Text style={[styles.msgText, { color: textColor, fontStyle: 'italic' }]}>
+              {message.translation}
+            </Text>
+          </View>
+        )}
+
+        {/* Detected language pill */}
+        {message.detectedLanguage && (
+          <View style={[styles.detectedPill, { backgroundColor: c.labelBg, borderColor: isDarkMode ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)' }]}>
+            <Text style={[styles.detectedLang, { color: metaColor }]}>
+              Detected: {message.detectedLanguage}
+            </Text>
+          </View>
+        )}
+
+        {/* Error island */}
+        {message.error && (
+          <View style={[styles.errorBox, { backgroundColor: c.errorBg, borderColor: isDarkMode ? 'rgba(255,69,58,0.3)' : 'rgba(255,59,48,0.2)' }]}>
+            <Text style={[styles.errorText, { color: c.errorText }]}>{message.error}</Text>
+          </View>
+        )}
+
+        {/* Time */}
+        <Text style={[styles.time, { color: metaColor }]}>
+          {new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
         </Text>
-      )}
-
-      {/* Error */}
-      {message.error && (
-        <View style={[styles.errorContainer, { backgroundColor: theme.errorBg }]}>
-          <Text style={[styles.errorText, { color: theme.errorText }]}>⚠️ {message.error}</Text>
-        </View>
-      )}
-
-      {/* Timestamp */}
-      <Text style={[styles.timestamp, { color: isUser ? 'rgba(255,255,255,0.7)' : theme.metaText }]}>
-        {new Date(message.timestamp).toLocaleTimeString([], {
-          hour: '2-digit',
-          minute: '2-digit',
-        })}
-      </Text>
+      </View>
     </Animated.View>
   );
 };
 
 const styles = StyleSheet.create({
-  messageContainer: {
-    maxWidth: '85%',
-    marginVertical: 8,
-    padding: 12,
-    borderRadius: 16,
-    position: 'relative',
+  row: {
+    marginVertical: 4,
+    paddingHorizontal: 8,
   },
-  userMessage: {
-    alignSelf: 'flex-end',
-    backgroundColor: '#2e2d80ff',
-    borderBottomRightRadius: 4,
+  rowRight: {
+    alignItems: 'flex-end',
   },
-  assistantMessage: {
-    alignSelf: 'flex-start',
-    backgroundColor: '#F0F0F0',
-    borderBottomLeftRadius: 4,
+  rowLeft: {
+    alignItems: 'flex-start',
   },
-  audioIcon: {
+  bubble: {
+    maxWidth: '82%',
+    paddingHorizontal: 10,
+    paddingVertical: 10,
+    borderRadius: 20,
+    overflow: 'hidden',
+  },
+  bubbleUser: {
+    borderBottomRightRadius: 6,
+  },
+  bubbleOther: {
+    borderBottomLeftRadius: 6,
+  },
+
+  audioBtn: {
     position: 'absolute',
     top: 8,
     right: 8,
-    padding: 4,
+    padding: 5,
+    borderRadius: 10,
+    borderWidth: 1,
+    zIndex: 1,
   },
-  textSection: {
-    marginBottom: 8,
+
+  section: {
+    marginBottom: 4,
   },
-  translationSection: {
-    marginTop: 4,
-    paddingTop: 8,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.2)',
+  innerIsland: {
+    borderRadius: 10,
+    borderWidth: 1,
+    padding: 8,
   },
   label: {
-    fontSize: 11,
-    fontWeight: '600',
-    marginBottom: 4,
-    opacity: 0.7,
-    color: '#000',
-  },
-  text: {
-    fontSize: 16,
-    lineHeight: 22,
-    color: '#000',
-  },
-  userText: {
-    color: '#fff',
-  },
-  translationText: {
-    fontStyle: 'italic',
-  },
-  metadata: {
     fontSize: 10,
-    opacity: 0.6,
-    marginTop: 4,
-    color: '#000',
+    fontWeight: '700',
+    marginBottom: 3,
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
   },
-  errorContainer: {
-    marginTop: 8,
-    padding: 8,
-    backgroundColor: 'rgba(255,0,0,0.1)',
+  msgText: {
+    fontSize: 15,
+    lineHeight: 21,
+  },
+
+  detectedPill: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
     borderRadius: 8,
+    borderWidth: 1,
+    marginTop: 4,
+  },
+  detectedLang: {
+    fontSize: 10,
+    fontWeight: '500',
+  },
+
+  errorBox: {
+    marginTop: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    borderRadius: 10,
+    borderWidth: 1,
   },
   errorText: {
     fontSize: 12,
-    color: '#D32F2F',
   },
-  timestamp: {
-    fontSize: 10,
+
+  time: {
+    fontSize: 11,
     marginTop: 6,
-    opacity: 0.5,
     textAlign: 'right',
-    color: '#000',
   },
-  skeletonContainer: {
-    marginTop: 4,
-  },
-  skeletonLine: {
-    height: 14,
-    borderRadius: 4,
+
+  skeleton: {
+    height: 11,
+    borderRadius: 5,
     marginVertical: 3,
   },
 });

@@ -12,13 +12,13 @@ import {
   Alert,
   Animated,
   useColorScheme,
-  Switch,
   StatusBar as RNStatusBar,
 } from 'react-native';
 import { Audio } from 'expo-av';
 import { FontAwesome } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { StatusBar } from 'expo-status-bar';
+import { BlurView } from 'expo-blur';
 
 import { recordSpeech } from '@/functions/recordSpeech';
 import useWebFocus from '@/hooks/useWebFocus';
@@ -28,8 +28,45 @@ import { BackendAPI } from '@/services/api';
 import { MessageBubble } from '@/components/MessageBubble';
 import { HistorySidebar } from '@/components/HistorySidebar';
 
+/* ─── Reusable Glass Island ─── */
+const GlassIsland: React.FC<{
+  children: React.ReactNode;
+  isDark: boolean;
+  style?: any;
+  borderRadius?: number;
+  intensity?: number;
+}> = ({ children, isDark, style, borderRadius = 16, intensity = 40 }) => (
+  <View
+    style={[
+      {
+        borderRadius,
+        overflow: 'hidden',
+        borderWidth: 1,
+        borderColor: isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.08)',
+      },
+      style,
+    ]}
+  >
+    <BlurView
+      intensity={intensity}
+      tint={isDark ? 'dark' : 'light'}
+      style={StyleSheet.absoluteFill}
+    />
+    <View
+      style={[
+        StyleSheet.absoluteFill,
+        {
+          backgroundColor: isDark
+            ? 'rgba(255,255,255,0.06)'
+            : 'rgba(255,255,255,0.55)',
+        },
+      ]}
+    />
+    {children}
+  </View>
+);
+
 export default function HomeScreen() {
-  // State
   const [sessions, setSessions] = useState<Session[]>([]);
   const [activeSession, setActiveSession] = useState<Session | null>(null);
   const [isRecording, setIsRecording] = useState(false);
@@ -41,7 +78,6 @@ export default function HomeScreen() {
   const [isDarkMode, setIsDarkMode] = useState(systemColorScheme === 'dark');
   const [recordingError, setRecordingError] = useState<string | null>(null);
 
-  // Refs
   const audioRecordingRef = useRef(new Audio.Recording());
   const webAudioPermissionsRef = useRef<MediaStream | null>(null);
   const flatListRef = useRef<FlatList>(null);
@@ -49,20 +85,16 @@ export default function HomeScreen() {
   const buttonScaleAnim = useRef(new Animated.Value(1)).current;
   const isWebFocused = useWebFocus();
 
-  // Load sessions on mount
   useEffect(() => {
     loadSessions();
     checkBackendHealth();
   }, []);
 
-  // Web audio permissions
   useEffect(() => {
     if (isWebFocused) {
       const getMicAccess = async () => {
         try {
-          const permissions = await navigator.mediaDevices.getUserMedia({
-            audio: true,
-          });
+          const permissions = await navigator.mediaDevices.getUserMedia({ audio: true });
           webAudioPermissionsRef.current = permissions;
         } catch (error) {
           console.error('Microphone permission denied:', error);
@@ -71,49 +103,28 @@ export default function HomeScreen() {
       if (!webAudioPermissionsRef.current) getMicAccess();
     } else {
       if (webAudioPermissionsRef.current) {
-        webAudioPermissionsRef.current
-          .getTracks()
-          .forEach((track) => track.stop());
+        webAudioPermissionsRef.current.getTracks().forEach((track) => track.stop());
         webAudioPermissionsRef.current = null;
       }
     }
   }, [isWebFocused]);
 
-  // Pulse animation for recording - world-class spring physics
   useEffect(() => {
     if (isRecording) {
       Animated.loop(
         Animated.sequence([
-          Animated.spring(pulseAnim, {
-            toValue: 1.4,
-            tension: 20,
-            friction: 3,
-            useNativeDriver: true,
-          }),
-          Animated.spring(pulseAnim, {
-            toValue: 1,
-            tension: 20,
-            friction: 3,
-            useNativeDriver: true,
-          }),
+          Animated.timing(pulseAnim, { toValue: 1.15, duration: 800, useNativeDriver: true }),
+          Animated.timing(pulseAnim, { toValue: 1, duration: 800, useNativeDriver: true }),
         ])
       ).start();
     } else {
-      Animated.spring(pulseAnim, {
-        toValue: 1,
-        tension: 40,
-        friction: 7,
-        useNativeDriver: true,
-      }).start();
+      pulseAnim.setValue(1);
     }
   }, [isRecording]);
 
-  // Auto-scroll to bottom when new message
   useEffect(() => {
     if (activeSession && activeSession.messages.length > 0) {
-      setTimeout(() => {
-        flatListRef.current?.scrollToEnd({ animated: true });
-      }, 100);
+      setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
     }
   }, [activeSession?.messages.length]);
 
@@ -125,13 +136,11 @@ export default function HomeScreen() {
   const loadSessions = async () => {
     const loadedSessions = await StorageService.getSessions();
     setSessions(loadedSessions);
-
     const activeId = await StorageService.getActiveSessionId();
     if (activeId) {
       const session = loadedSessions.find(s => s.id === activeId);
       setActiveSession(session || null);
     }
-
     if (!activeId || !loadedSessions.find(s => s.id === activeId)) {
       createNewSession();
     }
@@ -147,140 +156,61 @@ export default function HomeScreen() {
 
   const saveCurrentSession = async (updatedSession: Session) => {
     await StorageService.saveSession(updatedSession);
-    setSessions(prev =>
-      prev.map(s => (s.id === updatedSession.id ? updatedSession : s))
-    );
+    setSessions(prev => prev.map(s => (s.id === updatedSession.id ? updatedSession : s)));
   };
 
   const handleStartRecording = async () => {
     if (!backendOnline) {
-      Alert.alert(
-        'Backend Offline',
-        'The transcription server is not available. Please ensure the backend is running at ' + BackendAPI.baseUrl,
-        [{ text: 'OK' }]
-      );
+      Alert.alert('Backend Offline', 'The transcription server is not available.');
       return;
     }
-
     if (isProcessing) {
       Alert.alert('Please Wait', 'Previous recording is still processing.');
       return;
     }
-
     try {
-      // Clear any previous errors
       setRecordingError(null);
-      
-      // Check and request permissions
       const { status } = await Audio.requestPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert(
-          'Microphone Permission Required',
-          'Please grant microphone permission in your device settings to use voice recording.'
-        );
+        Alert.alert('Microphone Permission Required', 'Please grant microphone permission.');
         return;
       }
-
-      // Haptic feedback
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-      
-      // Button press animation
-      Animated.spring(buttonScaleAnim, {
-        toValue: 0.95,
-        tension: 100,
-        friction: 3,
-        useNativeDriver: true,
-      }).start();
+      Animated.spring(buttonScaleAnim, { toValue: 0.92, tension: 100, friction: 5, useNativeDriver: true }).start();
 
-      // Cleanup any existing recording
       try {
         const status = await audioRecordingRef.current.getStatusAsync();
-        if (status.isRecording) {
-          console.log('⚠️ Cleaning up previous recording...');
-          await audioRecordingRef.current.stopAndUnloadAsync();
-        }
-      } catch (e) {
-        // Ignore - no recording to clean up
-      }
+        if (status.isRecording) await audioRecordingRef.current.stopAndUnloadAsync();
+      } catch (e) {}
 
-      // Create fresh recording instance
       audioRecordingRef.current = new Audio.Recording();
-      
-      // Start recording
-      await recordSpeech(
-        audioRecordingRef,
-        setIsRecording,
-        !!webAudioPermissionsRef.current
-      );
-      
-      console.log('✅ Recording started successfully');
+      await recordSpeech(audioRecordingRef, setIsRecording, !!webAudioPermissionsRef.current);
     } catch (error: any) {
-      console.error('❌ Failed to start recording:', error);
       setIsRecording(false);
       setRecordingError(error.message);
-      
-      // Reset button animation
-      Animated.spring(buttonScaleAnim, {
-        toValue: 1,
-        tension: 100,
-        friction: 3,
-        useNativeDriver: true,
-      }).start();
-      
-      Alert.alert(
-        'Recording Error',
-        'Failed to start recording. Please try again.\n\nError: ' + error.message,
-        [{ text: 'OK' }]
-      );
+      Animated.spring(buttonScaleAnim, { toValue: 1, tension: 100, friction: 5, useNativeDriver: true }).start();
+      Alert.alert('Recording Error', 'Failed to start recording.\n\n' + error.message);
     }
   };
 
   const handleStopRecording = async () => {
     if (!activeSession) return;
-
     setIsRecording(false);
     setIsProcessing(true);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    
-    // Reset button animation
-    Animated.spring(buttonScaleAnim, {
-      toValue: 1,
-      tension: 100,
-      friction: 3,
-      useNativeDriver: true,
-    }).start();
+    Animated.spring(buttonScaleAnim, { toValue: 1, tension: 100, friction: 5, useNativeDriver: true }).start();
 
     try {
-      // Validate recording exists and is active
       const recordingStatus = await audioRecordingRef?.current?.getStatusAsync();
-      
-      if (!recordingStatus) {
-        throw new Error('No recording instance found');
-      }
-      
-      if (!recordingStatus.isRecording) {
-        throw new Error('No active recording found - recording may not have started properly');
-      }
+      if (!recordingStatus) throw new Error('No recording instance found');
+      if (!recordingStatus.isRecording) throw new Error('No active recording found');
 
-      console.log('⏹️ Stopping recording...');
-      
-      // Stop recording
       await audioRecordingRef?.current?.stopAndUnloadAsync();
       const recordingUri = audioRecordingRef?.current?.getURI() || '';
-      
-      if (!recordingUri) {
-        throw new Error('Recording failed to save - no audio file created');
-      }
+      if (!recordingUri) throw new Error('Recording failed to save');
 
-      console.log('✅ Recording stopped, URI:', recordingUri);
+      await Audio.setAudioModeAsync({ allowsRecordingIOS: false, playsInSilentModeIOS: false });
 
-      // Reset audio mode AFTER stopping
-      await Audio.setAudioModeAsync({
-        allowsRecordingIOS: false,
-        playsInSilentModeIOS: false,
-      });
-
-      // Create optimistic user message with loading state
       const userMessage: Message = {
         id: `msg_${Date.now()}`,
         type: 'user',
@@ -297,19 +227,8 @@ export default function HomeScreen() {
       };
       setActiveSession(updatedSession);
 
-      // Validate recording URI
-      console.log('� Recording URI:', recordingUri);
+      const response = await BackendAPI.transcribeAndTranslate(recordingUri, targetLanguage);
 
-      // Call backend API directly with URI (React Native FormData handles file reading)
-      console.log('🚀 Sending to backend...');
-      const response = await BackendAPI.transcribeAndTranslate(
-        recordingUri,
-        targetLanguage
-      );
-
-      console.log('✅ Received transcription:', response);
-
-      // Update user message with results
       const completedUserMessage: Message = {
         ...userMessage,
         transcript: response.transcript,
@@ -320,22 +239,14 @@ export default function HomeScreen() {
 
       const finalSession = {
         ...updatedSession,
-        messages: updatedSession.messages.map(m =>
-          m.id === userMessage.id ? completedUserMessage : m
-        ),
+        messages: updatedSession.messages.map(m => (m.id === userMessage.id ? completedUserMessage : m)),
         title: response.transcript.substring(0, 30) + '...',
         updatedAt: Date.now(),
       };
-
       setActiveSession(finalSession);
       await saveCurrentSession(finalSession);
-
-      // Success haptic
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      
     } catch (error: any) {
-      console.error('❌ Transcription error:', error);
-
       const errorMessage: Message = {
         id: `msg_${Date.now()}`,
         type: 'user',
@@ -343,28 +254,18 @@ export default function HomeScreen() {
         timestamp: Date.now(),
         error: error.message || 'Failed to process audio',
       };
-
       const errorSession = {
         ...activeSession,
         messages: [...activeSession.messages.filter(m => !m.isLoading), errorMessage],
         updatedAt: Date.now(),
       };
-
       setActiveSession(errorSession);
       await saveCurrentSession(errorSession);
-
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      
-      Alert.alert(
-        'Processing Error',
-        error.message || 'Failed to process audio',
-        [{ text: 'OK' }]
-      );
+      Alert.alert('Processing Error', error.message || 'Failed to process audio');
     } finally {
       setIsProcessing(false);
-      // Create fresh recording instance for next recording
       audioRecordingRef.current = new Audio.Recording();
-      console.log('🔄 Ready for next recording');
     }
   };
 
@@ -377,129 +278,134 @@ export default function HomeScreen() {
   };
 
   const handleDeleteSession = async (sessionId: string) => {
-    Alert.alert(
-      'Delete Chat',
-      'Are you sure you want to delete this chat? This cannot be undone.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            await StorageService.deleteSession(sessionId);
-            setSessions(prev => prev.filter(s => s.id !== sessionId));
-
-            if (activeSession?.id === sessionId) {
-              createNewSession();
-            }
-          },
+    Alert.alert('Delete Chat', 'Are you sure you want to delete this chat?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: async () => {
+          await StorageService.deleteSession(sessionId);
+          setSessions(prev => prev.filter(s => s.id !== sessionId));
+          if (activeSession?.id === sessionId) createNewSession();
         },
-      ]
-    );
+      },
+    ]);
   };
 
   const languages = ['English', 'Turkish', 'Persian', 'Arabic'];
 
-  // Dynamic theme colors
-  const theme = {
-    bg: isDarkMode ? '#000000' : '#FFFFFF',
-    headerBg: isDarkMode ? '#1C1C1E' : '#F8F8F8',
-    cardBg: isDarkMode ? '#2C2C2E' : '#FFFFFF',
-    border: isDarkMode ? '#38383A' : '#E0E0E0',
-    text: isDarkMode ? '#FFFFFF' : '#000000',
-    textSecondary: isDarkMode ? '#98989D' : '#666666',
-    textTertiary: isDarkMode ? '#636366' : '#999999',
-    primary: '#2e2d80ff',
-    success: '#4CAF50',
-    error: '#FF3B30',
-    emptyIcon: isDarkMode ? '#3A3A3C' : '#E0E0E0',
-  };
+  // Glass island theme
+  const t = isDarkMode
+    ? {
+        bg: '#0A0A0C',
+        chatBg: '#0A0A0C',
+        text: '#FFFFFF',
+        textSecondary: '#8E8E93',
+        primary: '#6C6CFF',
+        success: '#34C759',
+        error: '#FF453A',
+        islandBg: 'rgba(255,255,255,0.06)',
+        islandBorder: 'rgba(255,255,255,0.12)',
+        blurTint: 'dark' as const,
+      }
+    : {
+        bg: '#EFEAE5',
+        chatBg: '#EFEAE5',
+        text: '#000000',
+        textSecondary: '#6B6B70',
+        primary: '#5B5BD6',
+        success: '#34C759',
+        error: '#FF3B30',
+        islandBg: 'rgba(255,255,255,0.55)',
+        islandBorder: 'rgba(0,0,0,0.08)',
+        blurTint: 'light' as const,
+      };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.bg }]}>
+    <SafeAreaView style={[styles.root, { backgroundColor: t.bg }]}>
       <StatusBar style={isDarkMode ? 'light' : 'dark'} />
 
-      {/* Header with proper padding for notch/island */}
-      <View style={[styles.header, { backgroundColor: theme.headerBg, borderBottomColor: theme.border }]}>
-        <TouchableOpacity
-          style={styles.historyButton}
-          onPress={() => setShowHistory(true)}
-        >
-          <FontAwesome name="bars" size={24} color={theme.primary} />
-        </TouchableOpacity>
+      {/* ─── Header: each element is its own glass island ─── */}
+      <View style={styles.header}>
+        {/* Menu island */}
+        <GlassIsland isDark={isDarkMode} borderRadius={14} style={styles.iconIsland}>
+          <TouchableOpacity style={styles.islandBtn} onPress={() => setShowHistory(true)}>
+            <FontAwesome name="bars" size={18} color={t.primary} />
+          </TouchableOpacity>
+        </GlassIsland>
 
-        <View style={styles.headerCenter}>
-          <Text style={[styles.headerTitle, { color: theme.text }]}>TNT AI</Text>
-          <View style={styles.statusBadge}>
-            <View
-              style={[
-                styles.statusDot,
-                { backgroundColor: backendOnline ? theme.success : theme.error },
-              ]}
-            />
-            <Text style={[styles.statusText, { color: theme.textSecondary }]}>
-              {backendOnline ? 'Online' : 'Offline'}
-            </Text>
+        {/* Title + status island */}
+        <GlassIsland isDark={isDarkMode} borderRadius={18} style={styles.titleIsland}>
+          <View style={styles.titleIslandInner}>
+            <Text style={[styles.headerTitle, { color: t.text }]}>TNT AI</Text>
+            <View style={styles.statusRow}>
+              <View style={[styles.statusDot, { backgroundColor: backendOnline ? t.success : t.error }]} />
+              <Text style={[styles.statusLabel, { color: t.textSecondary }]}>
+                {backendOnline ? 'online' : 'offline'}
+              </Text>
+            </View>
           </View>
-        </View>
+        </GlassIsland>
 
-        <View style={styles.headerRight}>
-          {/* Dark Mode Toggle */}
-          <TouchableOpacity
-            style={styles.themeToggle}
-            onPress={() => setIsDarkMode(!isDarkMode)}
-          >
-            <FontAwesome 
-              name={isDarkMode ? 'sun-o' : 'moon-o'} 
-              size={20} 
-              color={theme.textSecondary} 
-            />
-          </TouchableOpacity>
-
-          {/* New Chat Button */}
-          <TouchableOpacity
-            style={styles.newChatButton}
-            onPress={createNewSession}
-          >
-            <FontAwesome name="plus" size={24} color={theme.primary} />
-          </TouchableOpacity>
+        {/* Right actions: theme + new chat islands */}
+        <View style={styles.headerActions}>
+          <GlassIsland isDark={isDarkMode} borderRadius={14} style={styles.iconIsland}>
+            <TouchableOpacity style={styles.islandBtn} onPress={() => setIsDarkMode(!isDarkMode)}>
+              <FontAwesome name={isDarkMode ? 'sun-o' : 'moon-o'} size={16} color={t.textSecondary} />
+            </TouchableOpacity>
+          </GlassIsland>
+          <GlassIsland isDark={isDarkMode} borderRadius={14} style={styles.iconIsland}>
+            <TouchableOpacity style={styles.islandBtn} onPress={createNewSession}>
+              <FontAwesome name="pencil-square-o" size={18} color={t.primary} />
+            </TouchableOpacity>
+          </GlassIsland>
         </View>
       </View>
 
-      {/* Language Selector */}
-      <Animated.View style={[styles.languageSelector, { backgroundColor: theme.headerBg, borderBottomColor: theme.border }]}>
-        <Text style={[styles.languageLabel, { color: theme.textSecondary }]}>Translate to:</Text>
-        <View style={styles.languageButtons}>
-          {languages.map(lang => (
-            <TouchableOpacity
+      {/* ─── Language bar: each chip is a glass island ─── */}
+      <View style={styles.langBar}>
+        {languages.map(lang => {
+          const active = targetLanguage === lang;
+          return (
+            <GlassIsland
               key={lang}
+              isDark={isDarkMode}
+              borderRadius={14}
+              intensity={active ? 60 : 30}
               style={[
-                styles.languageButton,
-                { backgroundColor: theme.cardBg, borderColor: theme.border },
-                targetLanguage === lang && { backgroundColor: theme.primary, borderColor: theme.primary },
+                styles.langIsland,
+                active && {
+                  borderColor: isDarkMode ? 'rgba(108,108,255,0.5)' : 'rgba(91,91,214,0.4)',
+                  backgroundColor: isDarkMode ? 'rgba(108,108,255,0.15)' : 'rgba(91,91,214,0.12)',
+                },
               ]}
-              onPress={() => {
-                setTargetLanguage(lang);
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              }}
             >
-              <Text
-                style={[
-                  styles.languageButtonText,
-                  { color: theme.text },
-                  targetLanguage === lang && { color: '#FFFFFF' },
-                ]}
+              <TouchableOpacity
+                activeOpacity={0.7}
+                onPress={() => {
+                  setTargetLanguage(lang);
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                }}
+                style={styles.langChipInner}
               >
-                {lang}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      </Animated.View>
+                <Text
+                  style={[
+                    styles.langChipText,
+                    { color: active ? t.primary : t.text },
+                    active && { fontWeight: '700' },
+                  ]}
+                >
+                  {lang}
+                </Text>
+              </TouchableOpacity>
+            </GlassIsland>
+          );
+        })}
+      </View>
 
-      {/* Messages */}
+      {/* ─── Chat area ─── */}
       <KeyboardAvoidingView
-        style={[styles.messagesContainer, { backgroundColor: theme.bg }]}
+        style={[styles.chatArea, { backgroundColor: t.chatBg }]}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
       >
@@ -511,85 +417,75 @@ export default function HomeScreen() {
               <MessageBubble
                 message={item}
                 isDarkMode={isDarkMode}
-                onPlayAudio={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  console.log('Play audio:', item.audioUri);
-                }}
+                onPlayAudio={() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)}
               />
             )}
             keyExtractor={item => item.id}
-            contentContainerStyle={styles.messagesList}
-            onContentSizeChange={() =>
-              flatListRef.current?.scrollToEnd({ animated: true })
-            }
+            contentContainerStyle={styles.msgList}
+            onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
+            showsVerticalScrollIndicator={false}
           />
         ) : (
-          <View style={styles.emptyState}>
-            <FontAwesome name="microphone" size={80} color={theme.emptyIcon} />
-            <Text style={[styles.emptyTitle, { color: theme.text }]}>Start Speaking</Text>
-            <Text style={[styles.emptySubtitle, { color: theme.textTertiary }]}>
-              Press and hold the microphone button to record
-            </Text>
-            <Text style={[styles.emptySubtitle, { color: theme.textTertiary }]}>
-              Your speech will be transcribed and translated
-            </Text>
+          <View style={styles.emptyWrap}>
+            <GlassIsland isDark={isDarkMode} borderRadius={28} style={styles.emptyIconIsland}>
+              <View style={styles.emptyIconInner}>
+                <FontAwesome name="microphone" size={32} color={t.primary} />
+              </View>
+            </GlassIsland>
+            <GlassIsland isDark={isDarkMode} borderRadius={16} style={styles.emptyTextIsland}>
+              <View style={styles.emptyTextInner}>
+                <Text style={[styles.emptyTitle, { color: t.text }]}>Start Speaking</Text>
+                <Text style={[styles.emptyDesc, { color: t.textSecondary }]}>
+                  Hold the mic button to record.{'\n'}Your speech will be transcribed & translated.
+                </Text>
+              </View>
+            </GlassIsland>
           </View>
         )}
       </KeyboardAvoidingView>
 
-      {/* Recording Button */}
-      <View style={[styles.recordingContainer, { backgroundColor: theme.headerBg, borderTopColor: theme.border }]}>
+      {/* ─── Bottom bar: glass island controls ─── */}
+      <View style={styles.bottomBar}>
         {isProcessing && (
-          <Animated.View style={styles.processingIndicator}>
-            <ActivityIndicator size="small" color={theme.primary} />
-            <Text style={[styles.processingText, { color: theme.primary }]}>
-              Processing with AI... Please wait
-            </Text>
-          </Animated.View>
+          <GlassIsland isDark={isDarkMode} borderRadius={12} style={styles.processingIsland}>
+            <View style={styles.processingRow}>
+              <ActivityIndicator size="small" color={t.primary} />
+              <Text style={[styles.processingText, { color: t.primary }]}>Processing...</Text>
+            </View>
+          </GlassIsland>
         )}
 
-        <Animated.View style={{ 
-          transform: [
-            { scale: Animated.multiply(pulseAnim, buttonScaleAnim) }
-          ] 
-        }}>
-          <TouchableOpacity
-            style={[
-              styles.recordButton,
-              { backgroundColor: theme.primary },
-              isRecording && styles.recordButtonActive,
-              (isProcessing || !backendOnline) && styles.recordButtonDisabled,
-            ]}
-            onPressIn={handleStartRecording}
-            onPressOut={handleStopRecording}
-            disabled={isProcessing || !backendOnline}
-            activeOpacity={0.8}
-          >
-            {isRecording ? (
-              <View style={styles.recordingIndicator}>
-                <Animated.View 
-                  style={[
-                    styles.recordingDot,
-                    { transform: [{ scale: pulseAnim }] }
-                  ]} 
-                />
-              </View>
-            ) : (
-              <FontAwesome name="microphone" size={32} color="white" />
-            )}
-          </TouchableOpacity>
-        </Animated.View>
+        {/* Mic button island */}
+        <GlassIsland isDark={isDarkMode} borderRadius={36} intensity={50} style={styles.micIsland}>
+          <Animated.View style={{ transform: [{ scale: Animated.multiply(pulseAnim, buttonScaleAnim) }] }}>
+            <TouchableOpacity
+              onPressIn={handleStartRecording}
+              onPressOut={handleStopRecording}
+              disabled={isProcessing || !backendOnline}
+              activeOpacity={0.75}
+              style={[
+                styles.micButton,
+                { backgroundColor: isRecording ? t.error : t.primary },
+                (isProcessing || !backendOnline) && { opacity: 0.4 },
+              ]}
+            >
+              {isRecording ? (
+                <View style={styles.stopSquare} />
+              ) : (
+                <FontAwesome name="microphone" size={26} color="#fff" />
+              )}
+            </TouchableOpacity>
+          </Animated.View>
+        </GlassIsland>
 
-        <Text style={[styles.recordHint, { color: theme.textSecondary }]}>
-          {isRecording
-            ? '🔴 Recording... Release to stop'
-            : backendOnline
-            ? '🎤 Hold to record'
-            : '⚠️ Backend offline - Check connection'}
-        </Text>
+        {/* Hint island */}
+        <GlassIsland isDark={isDarkMode} borderRadius={10} style={styles.hintIsland}>
+          <Text style={[styles.micHint, { color: t.textSecondary }]}>
+            {isRecording ? 'Recording... release to stop' : backendOnline ? 'Hold to record' : 'Backend offline'}
+          </Text>
+        </GlassIsland>
       </View>
 
-      {/* History Sidebar */}
       <HistorySidebar
         visible={showHistory}
         sessions={sessions}
@@ -603,198 +499,175 @@ export default function HomeScreen() {
     </SafeAreaView>
   );
 }
-//         </View>
-//       </ScrollView>
-//     </SafeAreaView>
-//   );
-// }
 
 const styles = StyleSheet.create({
-  container: {
+  root: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
-    paddingTop: Platform.OS === 'android' ? 0 : 0, // SafeAreaView handles this
   },
+
+  /* ── Header ── */
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    paddingTop: (RNStatusBar.currentHeight || 0) + 16, // Dynamic: Uses actual status bar height + 16px spacing
-    borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
-    backgroundColor: '#F8F8F8',
-  },
-  historyButton: {
-    width: 44,
-    height: 44,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerCenter: {
-    flex: 1,
-    alignItems: 'center',
-    paddingHorizontal: 8,
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#000',
-    marginBottom: 4,
-  },
-  statusBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  statusDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
-  statusText: {
-    fontSize: 12,
-    color: '#666',
-  },
-  headerRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  themeToggle: {
-    width: 36,
-    height: 36,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 18,
-  },
-  newChatButton: {
-    width: 44,
-    height: 44,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  languageSelector: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: '#F8F8F8',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
-  },
-  languageLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#666',
-    marginBottom: 8,
-  },
-  languageButtons: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  languageButton: {
-    paddingHorizontal: 16,
+    paddingHorizontal: 10,
     paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-  },
-  languageButtonActive: {
-    backgroundColor: '#2e2d80ff',
-    borderColor: '#2e2d80ff',
-  },
-  languageButtonText: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#333',
-  },
-  languageButtonTextActive: {
-    color: '#FFFFFF',
-  },
-  messagesContainer: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-  },
-  messagesList: {
-    padding: 16,
-    gap: 12,
-  },
-  emptyState: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 32,
-  },
-  emptyTitle: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#333',
-    marginTop: 24,
-    marginBottom: 8,
-  },
-  emptySubtitle: {
-    fontSize: 16,
-    color: '#999',
-    textAlign: 'center',
-    lineHeight: 24,
-  },
-  recordingContainer: {
-    alignItems: 'center',
-    paddingVertical: 24,
-    paddingHorizontal: 16,
-    backgroundColor: '#F8F8F8',
-    borderTopWidth: 1,
-    borderTopColor: '#E0E0E0',
-  },
-  processingIndicator: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    paddingTop: (RNStatusBar.currentHeight || 0) + 8,
     gap: 8,
-    marginBottom: 12,
   },
-  processingText: {
-    fontSize: 14,
-    color: '#2e2d80ff',
-    fontWeight: '500',
+  iconIsland: {
+    // individual icon glass pill
   },
-  recordButton: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: '#2e2d80ff',
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
-  },
-  recordButtonActive: {
-    backgroundColor: '#FF3B30',
-  },
-  recordButtonDisabled: {
-    backgroundColor: '#CCCCCC',
-    opacity: 0.6,
-  },
-  recordingIndicator: {
+  islandBtn: {
     width: 40,
     height: 40,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  recordingDot: {
-    width: 24,
-    height: 24,
-    borderRadius: 4,
-    backgroundColor: '#FFFFFF',
+  titleIsland: {
+    flex: 1,
   },
-  recordHint: {
-    marginTop: 12,
-    fontSize: 14,
-    color: '#666',
+  titleIslandInner: {
+    alignItems: 'center',
+    paddingVertical: 6,
+    paddingHorizontal: 14,
+  },
+  headerTitle: {
+    fontSize: 17,
+    fontWeight: '700',
+    letterSpacing: 0.3,
+  },
+  statusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 2,
+    gap: 4,
+  },
+  statusDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  statusLabel: {
+    fontSize: 11,
     fontWeight: '500',
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+
+  /* ── Language bar ── */
+  langBar: {
+    flexDirection: 'row',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    gap: 6,
+  },
+  langIsland: {
+    flex: 1,
+  },
+  langChipInner: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 4,
+  },
+  langChipText: {
+    fontSize: 13,
+    fontWeight: '500',
+  },
+
+  /* ── Chat ── */
+  chatArea: {
+    flex: 1,
+  },
+  msgList: {
+    paddingHorizontal: 8,
+    paddingVertical: 12,
+  },
+
+  /* ── Empty state ── */
+  emptyWrap: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 40,
+    gap: 14,
+  },
+  emptyIconIsland: {
+    // glass circle island for mic icon
+  },
+  emptyIconInner: {
+    width: 72,
+    height: 72,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyTextIsland: {
+    // glass island for text
+  },
+  emptyTextInner: {
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+  },
+  emptyTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    marginBottom: 4,
+  },
+  emptyDesc: {
+    fontSize: 13,
+    textAlign: 'center',
+    lineHeight: 19,
+  },
+
+  /* ── Bottom bar ── */
+  bottomBar: {
+    alignItems: 'center',
+    paddingVertical: 10,
+    paddingBottom: Platform.OS === 'ios' ? 24 : 10,
+    gap: 8,
+  },
+  processingIsland: {
+    // glass pill for "Processing..."
+  },
+  processingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+  },
+  processingText: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  micIsland: {
+    // large glass circle behind mic button
+  },
+  micButton: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    alignItems: 'center',
+    justifyContent: 'center',
+    margin: 6,
+  },
+  stopSquare: {
+    width: 20,
+    height: 20,
+    borderRadius: 4,
+    backgroundColor: '#fff',
+  },
+  hintIsland: {
+    // glass pill for hint text
+  },
+  micHint: {
+    fontSize: 12,
+    fontWeight: '500',
+    paddingHorizontal: 14,
+    paddingVertical: 6,
   },
 });
