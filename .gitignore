@@ -90,6 +90,8 @@ web-build/
 *.aab
 output.json
 android/app/debug.keystore
+android/app/release.keystore
+android/keystore.properties
 
 # iOS
 ios/Pods/
