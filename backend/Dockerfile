@@ -17,8 +17,8 @@ COPY . .
 # Environment variables
 ENV HOST=0.0.0.0 
 ENV PORT=8080 
-# Using faster-whisper default small model for CPU balance
-ENV WHISPER_MODEL=small 
+# Using faster-whisper large-v3-turbo for best quality/speed balance
+ENV WHISPER_MODEL=large-v3-turbo 
 ENV OMP_NUM_THREADS=4
 
 EXPOSE 8080
