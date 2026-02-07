@@ -22,6 +22,6 @@ export interface Session {
 export interface TranscriptionResponse {
   transcript: string;
   translation: string;
-  lang?: string;  // Legacy field
-  source_lang?: string;  // New field from backend
+  lang?: string;
+  source_lang?: string;
 }

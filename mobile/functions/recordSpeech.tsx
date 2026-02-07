@@ -40,7 +40,7 @@ export const recordSpeech = async (
           ios: {
             extension: ".wav",
             audioQuality: Audio.IOSAudioQuality.HIGH,
-            sampleRate: 16000,  // Match Android for consistency
+            sampleRate: 16000,
             numberOfChannels: 1,
             bitRate: 128000,
             linearPCMBitDepth: 16,

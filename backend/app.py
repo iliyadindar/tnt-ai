@@ -20,30 +20,25 @@ app.add_middleware(
     allow_origins=["*"], allow_methods=["*"], allow_headers=["*"], allow_credentials=True
 )
 
-# ----- API Key Authentication -----
 async def verify_api_key(x_api_key: str = Header(..., alias="X-API-Key")):
     if x_api_key != settings.API_KEY:
         raise HTTPException(status_code=403, detail="Invalid API key")
     return x_api_key
 
-# ----- Load models at startup -----
 print(f"Loading Faster Whisper model: {settings.WHISPER_MODEL} on CPU...")
 whisper_model = WhisperModel(
     settings.WHISPER_MODEL, 
     device="cpu", 
     compute_type=settings.COMPUTE_TYPE,
-    cpu_threads=settings.CPU_THREADS,   # Parallel CPU threads
-    num_workers=settings.NUM_WORKERS,   # Parallel transcription workers
+    cpu_threads=settings.CPU_THREADS,
+    num_workers=settings.NUM_WORKERS,
     download_root=settings.WHISPER_MODEL_DIR
 )
 print("✅ Model loaded successfully.")
 
-# ----- Argos Translate (fully offline, no API key) -----
 def _install_argos_languages():
-    """Download & install required Argos Translate language packs."""
     argostranslate.package.update_package_index()
     available = argostranslate.package.get_available_packages()
-    # All pairs we need between en, tr, ar, fa
     required_pairs = [
         ("en", "tr"), ("tr", "en"),
         ("en", "ar"), ("ar", "en"),
@@ -71,13 +66,12 @@ print("✅ Argos Translate ready.")
 class TranscribeTranslateResp(BaseModel):
     transcript: str
     translation: str
-    source_lang: str  # BCP-47-ish, e.g. "tr", "en", "fa"
+    source_lang: str
 
 SUPPORTED_LANG_CODES = {
     "ar": "Arabic", "en": "English", "fa": "Persian", "tr": "Turkish",
 }
 
-# Language name → Argos Translate language code
 LANG_NAME_TO_CODE = {
     "English": "en",
     "Turkish": "tr",
@@ -85,30 +79,26 @@ LANG_NAME_TO_CODE = {
     "Arabic": "ar",
 }
 
-# Whisper expects wav/float or a file path; we normalize via ffmpeg
-
 def to_wav(input_bytes: bytes) -> bytes:
-    """Convert any audio format to 16kHz mono WAV using ffmpeg."""
     with tempfile.NamedTemporaryFile(suffix=".in", delete=False) as fin:
         fin.write(input_bytes)
         fin.flush()
         in_path = fin.name
     out_path = in_path + ".wav"
     try:
-        # Convert to 16kHz mono WAV (Whisper's preferred format)
         result = subprocess.run(
             [
                 "ffmpeg", "-y", "-i", in_path,
-                "-ac", "1",           # Mono
-                "-ar", "16000",       # 16kHz sample rate
-                "-acodec", "pcm_s16le",  # 16-bit PCM
-                "-f", "wav",          # WAV format
+                "-ac", "1",
+                "-ar", "16000",
+                "-acodec", "pcm_s16le",
+                "-f", "wav",
                 out_path
             ],
             check=True,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
-            timeout=10  # 10 second timeout
+            timeout=10
         )
         
         if not os.path.exists(out_path):
@@ -132,19 +122,16 @@ async def transcribe_translate(
     target_lang: str = Form(default=settings.DEFAULT_TARGET_LANG),
     api_key: str = Depends(verify_api_key),
 ):
-    # target_lang is a human-readable name; pick its tokenizer/model at deploy time
     if target_lang not in LANG_NAME_TO_CODE:
         raise HTTPException(400, f"Unsupported target_lang: {target_lang}")
     target_lang_code = LANG_NAME_TO_CODE[target_lang]
     
-    # Log incoming file info
     print(f"📥 Received file: {file.filename}, Content-Type: {file.content_type}")
     
     try:
         raw = await file.read()
         print(f"📦 File size: {len(raw) / 1024:.2f} KB")
         
-        # Validate minimum file size
         if len(raw) < 1000:
             raise HTTPException(400, "Audio file too small - recording may be empty")
     except HTTPException:
@@ -170,18 +157,15 @@ async def transcribe_translate(
             tf.flush()
             wav_path = tf.name
         
-        # Run inference using Faster Whisper (optimized for speed)
         segments, info = await asyncio.to_thread(
             whisper_model.transcribe,
             wav_path,
-            beam_size=1,              # Greedy decoding = much faster, minimal quality loss
-            vad_filter=True,          # Skip silence = huge speedup
+            beam_size=1,
+            vad_filter=True,
             vad_parameters=dict(
                 min_silence_duration_ms=500,
             ),
         )
-        
-        # Collect segments
         text = " ".join([segment.text for segment in segments]).strip()
         lang = info.language
         
@@ -196,12 +180,10 @@ async def transcribe_translate(
     if not text:
         return TranscribeTranslateResp(transcript="", translation="", source_lang=lang)
 
-    # Translate using Argos Translate (fully offline)
     try:
         source_lang_code = lang if lang in SUPPORTED_LANG_CODES else "en"
         
         if source_lang_code == target_lang_code:
-            # Same language, no translation needed
             translated = text
         else:
             translated = await asyncio.to_thread(
@@ -219,17 +201,14 @@ async def transcribe_translate(
 
 @app.get("/privacy-policy", response_class=HTMLResponse)
 async def get_privacy_policy():
-    """Serves the privacy policy page."""
     with open("privacy_policy.html", "r", encoding="utf-8") as f:
         return f.read()
 
 @app.get("/", response_class=HTMLResponse)
 async def root():
-    """Serves the landing page."""
     with open("static/index.html", "r", encoding="utf-8") as f:
         return f.read()
 
-# Mount static files (CSS, JS, images if needed later)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 

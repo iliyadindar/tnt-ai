@@ -28,7 +28,6 @@ import { BackendAPI } from '@/services/api';
 import { MessageBubble } from '@/components/MessageBubble';
 import { HistorySidebar } from '@/components/HistorySidebar';
 
-/* ─── Reusable Glass Island ─── */
 const GlassIsland: React.FC<{
   children: React.ReactNode;
   isDark: boolean;
@@ -294,7 +293,6 @@ export default function HomeScreen() {
 
   const languages = ['English', 'Turkish', 'Persian', 'Arabic'];
 
-  // Glass island theme
   const t = isDarkMode
     ? {
         bg: '#0A0A0C',
@@ -325,16 +323,13 @@ export default function HomeScreen() {
     <SafeAreaView style={[styles.root, { backgroundColor: t.bg }]}>
       <StatusBar style={isDarkMode ? 'light' : 'dark'} />
 
-      {/* ─── Header: each element is its own glass island ─── */}
       <View style={styles.header}>
-        {/* Menu island */}
         <GlassIsland isDark={isDarkMode} borderRadius={14} style={styles.iconIsland}>
           <TouchableOpacity style={styles.islandBtn} onPress={() => setShowHistory(true)}>
             <FontAwesome name="bars" size={18} color={t.primary} />
           </TouchableOpacity>
         </GlassIsland>
 
-        {/* Title + status island */}
         <GlassIsland isDark={isDarkMode} borderRadius={18} style={styles.titleIsland}>
           <View style={styles.titleIslandInner}>
             <Text style={[styles.headerTitle, { color: t.text }]}>TNT AI</Text>
@@ -347,7 +342,6 @@ export default function HomeScreen() {
           </View>
         </GlassIsland>
 
-        {/* Right actions: theme + new chat islands */}
         <View style={styles.headerActions}>
           <GlassIsland isDark={isDarkMode} borderRadius={14} style={styles.iconIsland}>
             <TouchableOpacity style={styles.islandBtn} onPress={() => setIsDarkMode(!isDarkMode)}>
@@ -362,7 +356,6 @@ export default function HomeScreen() {
         </View>
       </View>
 
-      {/* ─── Language bar: each chip is a glass island ─── */}
       <View style={styles.langBar}>
         {languages.map(lang => {
           const active = targetLanguage === lang;
@@ -403,7 +396,6 @@ export default function HomeScreen() {
         })}
       </View>
 
-      {/* ─── Chat area ─── */}
       <KeyboardAvoidingView
         style={[styles.chatArea, { backgroundColor: t.chatBg }]}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -444,7 +436,6 @@ export default function HomeScreen() {
         )}
       </KeyboardAvoidingView>
 
-      {/* ─── Bottom bar: glass island controls ─── */}
       <View style={styles.bottomBar}>
         {isProcessing && (
           <GlassIsland isDark={isDarkMode} borderRadius={12} style={styles.processingIsland}>
@@ -455,7 +446,6 @@ export default function HomeScreen() {
           </GlassIsland>
         )}
 
-        {/* Mic button island */}
         <GlassIsland isDark={isDarkMode} borderRadius={36} intensity={50} style={styles.micIsland}>
           <Animated.View style={{ transform: [{ scale: Animated.multiply(pulseAnim, buttonScaleAnim) }] }}>
             <TouchableOpacity
@@ -477,7 +467,6 @@ export default function HomeScreen() {
           </Animated.View>
         </GlassIsland>
 
-        {/* Hint island */}
         <GlassIsland isDark={isDarkMode} borderRadius={10} style={styles.hintIsland}>
           <Text style={[styles.micHint, { color: t.textSecondary }]}>
             {isRecording ? 'Recording... tap to stop' : backendOnline ? 'Tap to record' : 'Backend offline'}
@@ -504,7 +493,6 @@ const styles = StyleSheet.create({
     flex: 1,
   },
 
-  /* ── Header ── */
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -514,7 +502,6 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   iconIsland: {
-    // individual icon glass pill
   },
   islandBtn: {
     width: 40,
@@ -556,7 +543,6 @@ const styles = StyleSheet.create({
     gap: 6,
   },
 
-  /* ── Language bar ── */
   langBar: {
     flexDirection: 'row',
     paddingHorizontal: 10,
@@ -577,7 +563,6 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
 
-  /* ── Chat ── */
   chatArea: {
     flex: 1,
   },
@@ -586,7 +571,6 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
 
-  /* ── Empty state ── */
   emptyWrap: {
     flex: 1,
     alignItems: 'center',
@@ -595,7 +579,6 @@ const styles = StyleSheet.create({
     gap: 14,
   },
   emptyIconIsland: {
-    // glass circle island for mic icon
   },
   emptyIconInner: {
     width: 72,
@@ -604,7 +587,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   emptyTextIsland: {
-    // glass island for text
   },
   emptyTextInner: {
     alignItems: 'center',
@@ -622,7 +604,6 @@ const styles = StyleSheet.create({
     lineHeight: 19,
   },
 
-  /* ── Bottom bar ── */
   bottomBar: {
     alignItems: 'center',
     paddingVertical: 10,
@@ -630,7 +611,6 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   processingIsland: {
-    // glass pill for "Processing..."
   },
   processingRow: {
     flexDirection: 'row',
@@ -644,7 +624,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   micIsland: {
-    // large glass circle behind mic button
   },
   micButton: {
     width: 60,
@@ -661,7 +640,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
   },
   hintIsland: {
-    // glass pill for hint text
   },
   micHint: {
     fontSize: 12,

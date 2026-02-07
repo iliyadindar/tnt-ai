@@ -10,7 +10,6 @@ import { BlurView } from 'expo-blur';
 import { Message } from '@/types';
 import { FontAwesome } from '@expo/vector-icons';
 
-// Skeleton shimmer
 const SkeletonLine: React.FC<{ width: string; isDarkMode: boolean; delay?: number }> = ({
   width,
   isDarkMode,
@@ -65,7 +64,6 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
     ]).start();
   }, []);
 
-  // Glass island colors
   const c = isDarkMode
     ? {
         userBorder: 'rgba(108,108,255,0.35)',
@@ -108,7 +106,6 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
         { opacity: fadeAnim, transform: [{ translateY: slideAnim }] },
       ]}
     >
-      {/* Glass island bubble */}
       <View
         style={[
           styles.bubble,
@@ -128,7 +125,6 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
           ]}
         />
 
-        {/* Audio button - glass island pill */}
         {message.audioUri && (
           <TouchableOpacity
             style={[styles.audioBtn, { borderColor: isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)' }]}
@@ -139,7 +135,6 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
           </TouchableOpacity>
         )}
 
-        {/* Transcript section - inner island */}
         {message.transcript && (
           <View style={[styles.section, styles.innerIsland, { backgroundColor: c.labelBg, borderColor: isDarkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)' }]}>
             <Text style={[styles.label, { color: metaColor }]}>
@@ -149,7 +144,6 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
           </View>
         )}
 
-        {/* Loading skeleton */}
         {message.isLoading && !message.transcript && (
           <View style={[styles.section, styles.innerIsland, { backgroundColor: c.labelBg, borderColor: isDarkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)' }]}>
             <Text style={[styles.label, { color: metaColor }]}>Processing...</Text>
@@ -159,7 +153,6 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
           </View>
         )}
 
-        {/* Translation section - inner island */}
         {message.translation && (
           <View style={[styles.section, styles.innerIsland, { backgroundColor: c.labelBg, borderColor: isDarkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)', marginTop: 6 }]}>
             <Text style={[styles.label, { color: metaColor }]}>
@@ -171,7 +164,6 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
           </View>
         )}
 
-        {/* Detected language pill */}
         {message.detectedLanguage && (
           <View style={[styles.detectedPill, { backgroundColor: c.labelBg, borderColor: isDarkMode ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)' }]}>
             <Text style={[styles.detectedLang, { color: metaColor }]}>
@@ -180,14 +172,12 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
           </View>
         )}
 
-        {/* Error island */}
         {message.error && (
           <View style={[styles.errorBox, { backgroundColor: c.errorBg, borderColor: isDarkMode ? 'rgba(255,69,58,0.3)' : 'rgba(255,59,48,0.2)' }]}>
             <Text style={[styles.errorText, { color: c.errorText }]}>{message.error}</Text>
           </View>
         )}
 
-        {/* Time */}
         <Text style={[styles.time, { color: metaColor }]}>
           {new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
         </Text>

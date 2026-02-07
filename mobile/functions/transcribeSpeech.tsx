@@ -23,7 +23,6 @@ export const transcribeSpeech = async (
       if (Platform.OS === "web") {
         const blob = await fetch(recordingUri).then((res) => res.blob());
         const foundBase64 = (await readBlobAsBase64(blob)) as string;
-        // Example: data:audio/wav;base64,asdjfioasjdfoaipsjdf
         const removedPrefixBase64 = foundBase64.split("base64,")[1];
         base64Uri = removedPrefixBase64;
       } else {

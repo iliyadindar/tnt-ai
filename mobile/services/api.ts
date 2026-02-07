@@ -8,14 +8,12 @@ const getApiBaseUrl = (): string => {
 
 const API_KEY = process.env.EXPO_PUBLIC_API_KEY ?? '';
 
-// Retry configuration
 const MAX_RETRIES = 3;
-const INITIAL_RETRY_DELAY = 1000; // ms
-const REQUEST_TIMEOUT = 180000; // 60 seconds
+const INITIAL_RETRY_DELAY = 1000;
+const REQUEST_TIMEOUT = 180000;
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-// Retry wrapper with exponential backoff
 async function withRetry<T>(
     fn: () => Promise<T>,
     retries = MAX_RETRIES,
@@ -34,7 +32,6 @@ async function withRetry<T>(
     }
 }
 
-// Create fetch with timeout
 const fetchWithTimeout = (url: string, options: RequestInit, timeout = REQUEST_TIMEOUT): Promise<Response> => {
     return Promise.race([
         fetch(url, options),
@@ -58,8 +55,7 @@ export const BackendAPI = {
         
         const formData = new FormData();
         
-        // React Native FormData requires URI-based file object
-        // @ts-ignore - React Native FormData has different typing
+        // @ts-ignore
         formData.append('file', {
             uri: audioUri,
             type: 'audio/wav',
@@ -79,7 +75,6 @@ export const BackendAPI = {
                     headers: {
                         'X-API-Key': API_KEY,
                     },
-                    // Don't set Content-Type manually - let FormData set it with boundary
                 });
                 
                 const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
@@ -96,7 +91,6 @@ export const BackendAPI = {
                 console.log('✅ API Response:', result);
                 return result;
             } catch (error: any) {
-                // Provide helpful error messages
                 if (error.message?.includes('Network request failed')) {
                     const helpfulError = new Error(
                         `Cannot reach backend at ${this.baseUrl}. ` +
@@ -126,7 +120,7 @@ export const BackendAPI = {
                 headers: {
                     'Accept': 'text/html',
                 },
-            }, 5000); // 5 second timeout for health check
+            }, 5000);
             
             const isOnline = response.ok;
             console.log(`🏥 Backend status: ${isOnline ? 'Online ✅' : 'Offline ❌'}`);

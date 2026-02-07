@@ -14,7 +14,6 @@ import { BlurView } from 'expo-blur';
 import { Session } from '@/types';
 import { FontAwesome } from '@expo/vector-icons';
 
-/* ─── Reusable Glass Island ─── */
 const GlassIsland: React.FC<{
   children: React.ReactNode;
   isDark: boolean;
@@ -122,7 +121,6 @@ export const HistorySidebar: React.FC<HistorySidebarProps> = ({
             </Text>
           </View>
 
-          {/* Delete island */}
           <TouchableOpacity
             style={[styles.deleteBtn, { borderColor: isDarkMode ? 'rgba(255,69,58,0.2)' : 'rgba(255,59,48,0.15)', borderWidth: 1, borderRadius: 10, backgroundColor: isDarkMode ? 'rgba(255,69,58,0.08)' : 'rgba(255,59,48,0.06)' }]}
             onPress={() => onDeleteSession(item.id)}
@@ -137,7 +135,6 @@ export const HistorySidebar: React.FC<HistorySidebarProps> = ({
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
       <SafeAreaView style={[styles.container, { backgroundColor: t.bg }]}>
-        {/* Header: title island + close island */}
         <View style={styles.header}>
           <GlassIsland isDark={isDarkMode} borderRadius={14} style={styles.headerTitleIsland}>
             <Text style={[styles.headerTitle, { color: t.text }]}>Chats</Text>
@@ -150,7 +147,6 @@ export const HistorySidebar: React.FC<HistorySidebarProps> = ({
           </GlassIsland>
         </View>
 
-        {/* New chat island */}
         <GlassIsland
           isDark={isDarkMode}
           borderRadius={14}
@@ -171,7 +167,6 @@ export const HistorySidebar: React.FC<HistorySidebarProps> = ({
           </TouchableOpacity>
         </GlassIsland>
 
-        {/* Session list */}
         <FlatList
           data={sessions}
           renderItem={renderSession}
@@ -251,7 +246,6 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   card: {
-    // glass island styling from GlassIsland component
   },
   cardTouchable: {
     flexDirection: 'row',

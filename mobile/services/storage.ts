@@ -5,7 +5,6 @@ const SESSIONS_KEY = '@tnt_ai_sessions';
 const ACTIVE_SESSION_KEY = '@tnt_ai_active_session';
 
 export const StorageService = {
-  // Sessions
   async getSessions(): Promise<Session[]> {
     try {
       const data = await AsyncStorage.getItem(SESSIONS_KEY);
@@ -52,7 +51,6 @@ export const StorageService = {
     }
   },
 
-  // Active Session
   async getActiveSessionId(): Promise<string | null> {
     try {
       return await AsyncStorage.getItem(ACTIVE_SESSION_KEY);
@@ -70,7 +68,6 @@ export const StorageService = {
     }
   },
 
-  // Create new session
   createNewSession(): Session {
     const now = Date.now();
     return {
