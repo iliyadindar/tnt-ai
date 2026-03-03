@@ -3,7 +3,8 @@ import * as Device from 'expo-device';
 import { TranscriptionResponse } from '@/types';
 
 const getApiBaseUrl = (): string => {
-    return 'https://iliyadindar.site';
+    // Update this with your actual domain or backend URL
+    return 'https://yourdomain.com';
 };
 
 const API_KEY = process.env.EXPO_PUBLIC_API_KEY ?? '';

@@ -147,6 +147,8 @@ On first run, Whisper model weights and Argos language packs will be downloaded 
 
 **Or with Docker:**
 
+> **Note:** Before deploying to production, make sure to update `backend/Caddyfile` with your own domain name (e.g., replacing `iliyadindar.site, www.iliyadindar.site` with your actual domain) to enable automatic HTTPS.
+
 ```bash
 cd backend
 docker-compose up -d --build
@@ -160,10 +162,11 @@ cd mobile
 # Install dependencies
 npm install
 
-# Update the API URL in services/api.ts to point to your backend
+# Update the API URL in services/api.ts to point to your backend (e.g., https://yourdomain.com)
 
 # Start Expo dev server
 npm start
+
 
 # Or run directly on Android
 npm run android
