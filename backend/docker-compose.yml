@@ -18,7 +18,7 @@ services:
     build: .
     restart: always
     environment:
-      - WHISPER_MODEL=medium
+      - WHISPER_MODEL=small
     volumes:
        - ./models:/app/models
     # deploy:

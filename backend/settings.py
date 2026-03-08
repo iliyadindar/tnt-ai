@@ -7,7 +7,7 @@ class Settings(BaseModel):
     PORT: int = int(os.getenv("PORT", "8080"))
 
 
-    WHISPER_MODEL: str = os.getenv("WHISPER_MODEL", "medium")
+    WHISPER_MODEL: str = os.getenv("WHISPER_MODEL", "small")
     WHISPER_MODEL_DIR: str = os.getenv("WHISPER_MODEL_DIR", "models/whisper")
     COMPUTE_TYPE: str = os.getenv("COMPUTE_TYPE", "int8")
     CPU_THREADS: int = int(os.getenv("CPU_THREADS", "0"))

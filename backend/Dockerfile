@@ -19,8 +19,8 @@ COPY . .
 # Environment variables
 ENV HOST=0.0.0.0 
 ENV PORT=8080 
-# CPU-optimized: medium model = good accuracy + reasonable speed
-ENV WHISPER_MODEL=medium 
+# CPU-optimized: small model = faster inference
+ENV WHISPER_MODEL=small 
 ENV OMP_NUM_THREADS=0
 ENV CT2_USE_EXPERIMENTAL_PACKED_GEMM=1
 
