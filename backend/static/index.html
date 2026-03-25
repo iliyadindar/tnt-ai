@@ -546,6 +546,41 @@
             transform: translate(4px, -4px);
         }
 
+        /* ---- SERVICES ---- */
+        .services-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 14px;
+        }
+
+        .service-card {
+            padding: 24px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            transition: all 0.3s ease;
+            text-align: center;
+        }
+        .service-card:hover {
+            background: var(--bg-card-hover);
+            border-color: var(--border-accent);
+            transform: translateY(-3px);
+        }
+        .service-card .s-icon {
+            font-size: 1.6rem;
+            margin-bottom: 12px;
+        }
+        .service-card h3 {
+            font-size: 0.92rem;
+            font-weight: 600;
+            margin-bottom: 6px;
+        }
+        .service-card p {
+            font-size: 0.78rem;
+            color: var(--text-dim);
+            line-height: 1.5;
+        }
+
         /* ---- ACHIEVEMENTS ---- */
         .achievements-grid {
             display: grid;
@@ -581,7 +616,7 @@
         /* ---- CONTACT ---- */
         .contact-grid {
             display: grid;
-            grid-template-columns: repeat(4, 1fr);
+            grid-template-columns: repeat(5, 1fr);
             gap: 12px;
         }
 
@@ -657,9 +692,10 @@
 
             .focus-grid,
             .about-content,
-            .achievements-grid { grid-template-columns: 1fr; }
+            .achievements-grid,
+            .services-grid { grid-template-columns: 1fr; }
 
-            .contact-grid { grid-template-columns: 1fr 1fr; }
+            .contact-grid { grid-template-columns: repeat(3, 1fr); }
 
             .stack-row { gap: 6px; }
             .chip { font-size: 0.72rem; padding: 6px 12px; }
@@ -703,9 +739,8 @@
             <a href="#" class="nav-logo">iliya<span class="cursor">_</span></a>
             <ul class="nav-links">
                 <li><a href="#focus">focus</a></li>
-                <li><a href="#about">about</a></li>
-                <li><a href="#stack">stack</a></li>
                 <li><a href="#projects">projects</a></li>
+                <li><a href="#services">hire me</a></li>
                 <li><a href="#contact">contact</a></li>
             </ul>
             <button class="hamburger" id="hamburger" aria-label="Menu">
@@ -716,9 +751,9 @@
 
     <div class="mobile-menu" id="mobileMenu">
         <a href="#focus" onclick="closeMenu()">focus</a>
-        <a href="#about" onclick="closeMenu()">about</a>
-        <a href="#stack" onclick="closeMenu()">stack</a>
         <a href="#projects" onclick="closeMenu()">projects</a>
+        <a href="#services" onclick="closeMenu()">hire me</a>
+        <a href="#about" onclick="closeMenu()">about</a>
         <a href="#contact" onclick="closeMenu()">contact</a>
     </div>
 
@@ -834,7 +869,7 @@
                 <div class="about-card reveal">
                     <div class="icon cyan">⚙️</div>
                     <h3>Builder</h3>
-                    <p>20+ Telegram bots, PyPI packages, open-source tools</p>
+                    <p>20+ Telegram bots (12K+ users), PyPI packages, full-stack apps</p>
                 </div>
             </div>
         </div>
@@ -852,6 +887,7 @@
                         <span class="chip">Python</span>
                         <span class="chip">TypeScript</span>
                         <span class="chip">JavaScript</span>
+                        <span class="chip">PHP</span>
                         <span class="chip">C++</span>
                         <span class="chip">SQL</span>
                         <span class="chip">Bash</span>
@@ -907,6 +943,21 @@
             <div class="section-label reveal">projects</div>
             <h2 class="section-title reveal">Things I've built</h2>
             <div class="projects-grid">
+                <a href="https://lab.iliyadindar.site" target="_blank" class="project-card reveal">
+                    <div class="project-icon g">🌐</div>
+                    <div class="project-info">
+                        <h3>IliyaMed</h3>
+                        <p class="desc">Full-stack social platform with PHP frontend, Flask REST API, Next.js admin panel, WebSocket server terminal, and MySQL backend. Deployed in production.</p>
+                        <div class="project-tags">
+                            <span class="ptag">PHP</span>
+                            <span class="ptag">Next.js</span>
+                            <span class="ptag">Flask</span>
+                            <span class="ptag">MySQL</span>
+                            <span class="ptag">WebSocket</span>
+                        </div>
+                    </div>
+                    <span class="project-arrow">↗</span>
+                </a>
                 <a href="https://github.com/iliyadindar/tnt-ai" target="_blank" class="project-card reveal">
                     <div class="project-icon b">🤖</div>
                     <div class="project-info">
@@ -993,11 +1044,11 @@
                 </div>
                 <div class="ach-item reveal">
                     <span class="icon">🤖</span>
-                    <p><strong>20+ Telegram Bots</strong> — Delivered to real users at scale</p>
+                    <p><strong>20+ Telegram Bots</strong> — Including one with 12K+ active users</p>
                 </div>
                 <div class="ach-item reveal">
                     <span class="icon">📝</span>
-                    <p><strong>Self-Learner</strong> — Exploring AI, NLP & Quantum Computing independently</p>
+                    <p><strong>Production App</strong> — Full-stack social platform live at lab.iliyadindar.site</p>
                 </div>
                 <div class="ach-item reveal">
                     <span class="icon">🔐</span>
@@ -1006,6 +1057,31 @@
                 <div class="ach-item reveal">
                     <span class="icon">🌐</span>
                     <p><strong>Cloud Deployments</strong> — VPS, Docker, production backends</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- SERVICES -->
+    <section id="services">
+        <div class="container">
+            <div class="section-label reveal">services</div>
+            <h2 class="section-title reveal">What I can build for you</h2>
+            <div class="services-grid">
+                <div class="service-card reveal">
+                    <div class="s-icon">🤖</div>
+                    <h3>Telegram Bots</h3>
+                    <p>Custom bots for automation, games, communities, and business — 20+ delivered, 12K+ users served.</p>
+                </div>
+                <div class="service-card reveal">
+                    <div class="s-icon">🌐</div>
+                    <h3>Full-Stack Web Apps</h3>
+                    <p>Production-ready apps with Next.js, Flask/FastAPI backends, MySQL/PostgreSQL, and admin panels.</p>
+                </div>
+                <div class="service-card reveal">
+                    <div class="s-icon">🔐</div>
+                    <h3>Security Audits</h3>
+                    <p>Junior penetration testing, OWASP Top 10 assessment, and vulnerability reporting for web applications.</p>
                 </div>
             </div>
         </div>
@@ -1029,9 +1105,13 @@
                     <div class="c-icon tg">✈️</div>
                     <span>Telegram</span>
                 </a>
-                <a href="https://orcid.org/0009-0000-2813-9539" target="_blank" class="contact-card">
-                    <div class="c-icon or">🔬</div>
-                    <span>ORCID</span>
+                <a href="mailto:ilia.dindar@gmail.com" class="contact-card">
+                    <div class="c-icon or">✉️</div>
+                    <span>Email</span>
+                </a>
+                <a href="https://blog.iliyadindar.site" target="_blank" class="contact-card">
+                    <div class="c-icon gh">📝</div>
+                    <span>Blog</span>
                 </a>
             </div>
         </div>
